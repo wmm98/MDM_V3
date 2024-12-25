@@ -1,9 +1,6 @@
-import os.path
 import time
-from http.client import responses
-
 import requests
-from torchvision.datasets.utils import download_url
+import os
 
 
 class RequestMethod:
@@ -38,20 +35,7 @@ class RequestMethod:
         response = requests.put(url, data=data, headers=headers, **kwargs)
         return response
 
-    def split_file(self, file_path, chunk_size=10 * 1024 * 1024):
-        file_number = 1
-        file_parts = []
-        with open(file_path, 'rb') as file:
-            while True:
-                chunk = file.read(chunk_size)
-                if not chunk:
-                    break
-                chunk_file_name = "%d_%s" % (file_number, os.path.basename(file_path))
-                with open(chunk_file_name, 'wb') as chunk_file:
-                    chunk_file.write(chunk)
-                file_parts.append(chunk_file_name)
-                file_number += 1
-        return file_parts
+
 
 
 if __name__ == '__main__':
@@ -84,7 +68,7 @@ if __name__ == '__main__':
     base_path = os.path.join(os.getcwd())
     filename = "T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip"
     file_path = os.path.join(base_path, "binary_", filename)
-    session_id = "24ea00cc6a4a5944907f2a147cad5991"
+    session_id = "3618d1b189447898f327c278a9bfc8a2"
     form_data = {"file_name": filename, "file_size": 34655441, "block_size": 10485760,
                  "multil_block": "true", "filename": filename,
                  "timestamp": "1735094960", "token": "4e69addd4527949ccafa263270b000ff"}
@@ -105,7 +89,8 @@ if __name__ == '__main__':
 
     # 解释文件
     express_url = "http://192.168.0.30:8080/api/v1/ota/packages/upload"
-    express_form_data = {"departmentId": 55, "url": "http://192.168.0.32:8000/fileStatic/tmp/55/ota/T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip"}
+    express_form_data = {"departmentId": 55,
+                         "url": "http://192.168.0.32:8000/fileStatic/tmp/55/ota/T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip"}
     express_response = re.m_post(url=express_url, session_id=session_id, json=express_form_data)
     print(express_response.json())
     # 返回create所需要的信息
@@ -113,9 +98,12 @@ if __name__ == '__main__':
     # 更新文件
     update_url = "http://192.168.0.30:8080/api/v1/ota/packages/create"
     download_url = "http://192.168.0.32:8000/fileStatic/tmp/55/ota/T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip"
-    update_form_data = {"departmentId":55,"description":"","devModel":"T10","downloadUrl": download_url,"firmwareVersion": "fv2.1.7",
-"md5Sum":"37f283dc90c78ac50bef66efec873743","name":"T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip", "otaType":0,"size":7129252,"systemVersion":"sv12",
-                        "version":"pv2.1.7-9.9.9.zip","wirelessModule":"qcm2290"}
+    update_form_data = {"departmentId": 55, "description": "", "devModel": "T10", "downloadUrl": download_url,
+                        "firmwareVersion": "fv2.1.7",
+                        "md5Sum": "37f283dc90c78ac50bef66efec873743",
+                        "name": "T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip", "otaType": 0, "size": 7129252,
+                        "systemVersion": "sv12",
+                        "version": "pv2.1.7-9.9.9.zip", "wirelessModule": "qcm2290"}
     update_response = re.m_post(url=update_url, session_id=session_id, json=update_form_data)
     print(update_response.json())
     # 返回code 63009表示 ota包已经存在
@@ -124,7 +112,7 @@ if __name__ == '__main__':
     print("获取列表")
     time.sleep(3)
     list_url = "http://192.168.0.30:8080/api/v1/ota/packages"
-    list_data = {"page": 1, "pageSize": 10, "departmentId": 55, "order": "id","sort": "desc"}
+    list_data = {"page": 1, "pageSize": 10, "departmentId": 55, "order": "id", "sort": "desc"}
     list_response = re.m_get(url=list_url, session_id=session_id, params=list_data)
     print(list_response.json())
 
