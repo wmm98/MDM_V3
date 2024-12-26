@@ -1,5 +1,5 @@
-from request_method import RequestMethod
-from public_page import PublicPage
+from WebPage.request_method import RequestMethod
+from WebPage.public_page import PublicPage
 
 re_method = RequestMethod()
 
