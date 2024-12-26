@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     # 上传大于10M的文件
     base_path = os.path.join(os.getcwd())
-    filename = "T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip"
+    filename = "../Package/OTA/Original/T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip"
     file_path = os.path.join(base_path, "binary_", filename)
     session_id = "3618d1b189447898f327c278a9bfc8a2"
     form_data = {"file_name": filename, "file_size": 34655441, "block_size": 10485760,

@@ -27,7 +27,7 @@ if __name__ == '__main__':
     public = PublicPage()
     base_path = os.path.join(os.getcwd())
     print(base_path)
-    filename = "T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip"
+    filename = "../Package/OTA/Original/T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip"
     file_path = os.path.join(base_path, filename)
     new_dir = os.path.join(base_path, "binary_")
     list_parts = public.split_file(file_path, new_dir)
