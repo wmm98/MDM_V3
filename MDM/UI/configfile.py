@@ -14,6 +14,7 @@ class ConfigP(UIConfigPath):
     ui_option_device_name = "device_name"
     bg_option_devices_name = "devices_name"
     bg_option_COM_ports = "COM_ports"
+    ui_option_cases = "cases"
     # 是否进行失败概率性统计测试
     is_probability_test = "is_probability_test"
     # 每一轮间隔时长

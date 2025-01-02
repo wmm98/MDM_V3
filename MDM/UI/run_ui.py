@@ -68,8 +68,10 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # 展示用例树
         self.list_tree_cases()
-        # 节点全部展开
         self.treeWidget.expandAll()
+        self.treeWidget.itemChanged.connect(self.handlechanged)
+        # 用例树点击事件
+        # self.treeWidget.itemClicked.connect(self.on_item_clicked)
 
         self.select_devices_name()
         self.captcha_button.clicked.connect(self.display_captcha)
@@ -170,6 +172,44 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         print("Stderr:", stderr)
 
     def handle_submit(self):
+        # 检查用例是否为空
+        self.tree_status = []
+        # 用例跑的时间集
+        self.tree_values = []
+        for i in range(self.treeWidget.topLevelItemCount()):
+            item = self.treeWidget.topLevelItem(i)
+            # 2 表示已勾选，0 表示未勾选，1 表示半选中
+            self.tree_status.append(self.get_tree_item_status(item))
+
+        # 保存要跑的用例
+        self.durations = []
+        self.cases = []
+        tree_status = self.tree_status[0]["children"][0]["children"]
+
+        # 提取压测用例
+        for slave in tree_status:
+            for children in slave['children']:
+                if children["status"] == 2:
+                    self.cases.append(children["text"])
+
+        if not self.cases:
+            self.get_waring("请选择用例")
+            return
+
+        # 相应用例转为英文标识
+        self.transfer_cases = []
+        for case in self.cases:
+            if "ota推送--正常压测" in case:
+                self.transfer_cases.append("stability_normal_release_ota")
+
+        self.ui_config.add_config_option(self.ui_config.section_ui_to_background,
+                                         self.ui_config.ui_option_device_name,
+                                         self.edit_device_name.currentText())
+        # 保存用例
+        self.ui_config.add_config_option(self.ui_config.section_ui_to_background,
+                                         self.ui_config.ui_option_cases, ",".join(self.transfer_cases))
+
+
         # try:
         project_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -253,6 +293,36 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.qt_process.startDetached("taskkill /PID %s /F /T" % str(self.qt_process.processId()))
         event.accept()
 
+    def handlechanged(self, item, column):
+        # 获取选中节点的子节点个数
+        count = item.childCount()
+        # 如果选中,子节点全选中
+        if item.checkState(column) == Qt.Checked:
+            for f in range(count):
+                if item.child(f).checkState(0) != Qt.Checked:
+                    item.child(f).setCheckState(0, Qt.Checked)
+        # 如果取消选中,子节点全取消勾选
+        if item.checkState(column) == Qt.Unchecked:
+            for f in range(count):
+                if item.child(f).checkState != Qt.Unchecked:
+                    item.child(f).setCheckState(0, Qt.Unchecked)
+
+    def get_tree_item_status(self, tree_item):
+        status = tree_item.checkState(0)
+        if status == 2:
+            self.cases_selected_sum += 1
+        result = {
+            "text": tree_item.text(0),
+            "status": status,
+            "children": [],
+            "duration": tree_item.text(1)
+        }
+        # 我添加的
+        for i in range(tree_item.childCount()):
+            child_item = tree_item.child(i)
+            result["children"].append(self.get_tree_item_status(child_item))
+        return result
+
     def list_tree_cases(self):
         # 用例数结构
         # 设置列数
@@ -277,7 +347,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.item_S_T_STA.setFlags(self.item_S_T_STA.flags() | Qt.ItemIsSelectable)
         # 立项测试子用例
         self.item_S_T_STA_child_boot_check = QTreeWidgetItem(self.item_S_T_STA)
-        self.item_S_T_STA_child_boot_check.setText(0, "ota推送压测")
+        self.item_S_T_STA_child_boot_check.setText(0, "ota推送--正常压测")
         self.item_S_T_STA_child_boot_check.setCheckState(0, Qt.Unchecked)
         self.item_S_T_STA_child_boot_check.setText(1, "")
         self.item_S_T_STA_child_boot_check.setText(2, "次")
