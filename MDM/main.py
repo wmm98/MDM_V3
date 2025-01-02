@@ -1,12 +1,11 @@
-import pytest
 import shutil
 import datetime
-from Common import config, process_shell
+from MDM.Common import config, process_shell
+import pytest
 
 if __name__ == '__main__':
     conf = config.Config()
     shell = process_shell.Shell()
-
     xml_report_path = conf.xml_report_path
     html_report_path = conf.html_report_path
     pro_path = conf.environment_properties_path

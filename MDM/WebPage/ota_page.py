@@ -1,6 +1,6 @@
 import os
-from WebPage.request_method import RequestMethod
-from WebPage.login_page import LoginPage
+from MDM.WebPage.request_method import RequestMethod
+from MDM.WebPage.login_page import LoginPage
 
 
 re_method = RequestMethod()
