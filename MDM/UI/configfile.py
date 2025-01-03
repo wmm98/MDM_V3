@@ -9,6 +9,11 @@ class ConfigP(UIConfigPath):
     # 接口相关
     section_web_interface = "Web-Interface"
     option_session_id = "session_id"
+    option_department_id = "department_id"
+
+    section_ota_interface = "OTA"
+
+
 
     # 公共
     ui_option_device_name = "device_name"

@@ -15,3 +15,8 @@ class UIConfigPath:
 
     bat_pre_info_path = os.path.join(project_path, "UI", "bat_pre_info.bat")
 
+    # ota相关路径
+    package_path = os.path.join(project_path, "Package")
+    ota_path = os.path.join(package_path, "OTA")
+    ota_origin_path = os.path.join(ota_path, "Original")
+    ota_split_path = os.path.join(ota_path, "Split")

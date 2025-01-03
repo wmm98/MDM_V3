@@ -45,11 +45,12 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.setupUi(self)
         self.AllTestCase = None
-        self.intiui()
+        self.inti_ui()
+        self.init_signal_slot()
         self.cases_selected_sum = 0
         self.uuid = None
 
-    def intiui(self):
+    def inti_ui(self):
         # 初始化
         # 初始化图片cursor
         # self.cursor = QTextCursor(self.document)
@@ -68,12 +69,15 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # 展示用例树
         self.list_tree_cases()
+        self.select_devices_name()
+
+    def init_signal_slot(self):
+
         self.treeWidget.expandAll()
         self.treeWidget.itemChanged.connect(self.handlechanged)
         # 用例树点击事件
         # self.treeWidget.itemClicked.connect(self.on_item_clicked)
 
-        self.select_devices_name()
         self.captcha_button.clicked.connect(self.display_captcha)
         self.login_button.clicked.connect(self.login)
 
@@ -84,23 +88,26 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         # 登录
         username = self.edit_user_name.text()
         if not username:
-            self.get_waring("用户名不能为空")
+            self.get_waring("用户名不能为空!!!")
             return
         password = self.edit_password.text()
         if not password:
-            self.get_waring("密码不能为空")
+            self.get_waring("密码不能为空!!!")
             return
         captcha = self.edit_captcha.text()
         if not captcha:
-            self.get_waring("验证码不能为空")
+            self.get_waring("验证码不能为空!!!")
             return
         # 登录
         url = "http://192.168.0.30:8888/api/v1/login"
         json_data = {"username": username, "password": password, "uuid": self.uuid, "captcha": captcha}
         response = requests.post(url=url, json=json_data).json()
         if response["code"] == 100000:
+            print(response["data"])
             session_id = response["data"]["session_id"]
+            department_id = str(response["data"]["user"]["departmentId"])
             self.ui_config.add_config_option(self.ui_config.section_ui_to_background, self.ui_config.option_session_id, session_id)
+            self.ui_config.add_config_option(self.ui_config.section_ui_to_background, self.ui_config.option_department_id, department_id)
             self.login_tips.setVisible(True)
             self.login_tips.setText("登录成功！")
             self.login_tips.setStyleSheet("color:red")
@@ -361,7 +368,6 @@ if __name__ == '__main__':
                      stderr=subprocess.PIPE).communicate(timeout=120)
     app = QtWidgets.QApplication(sys.argv)
     myshow = UIDisplay()
-    # myshow.get_captcha()
     myshow.display_captcha()
     myshow.show()
     app.exec_()

@@ -153,3 +153,5 @@ class ScrollablePlainTextEdit(QTextEdit):
     def slot_scroll_to_bottom(self, min, max):
         # 设置滚动条到底部
         self.verticalScrollBar().setValue(max)
+
+
