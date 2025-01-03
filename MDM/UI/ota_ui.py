@@ -13,6 +13,25 @@ from pubilc import public_
 conf_path = config_path.UIConfigPath()
 pul = public_()
 
+
+class PostRequestWorker(QtCore.QThread):
+    progress = QtCore.pyqtSignal(dict)  # 修改信号类型为字典
+
+    def __init__(self, info):
+        super().__init__()
+        self.info = info
+
+    def run(self):
+        try:
+            response = pul.m_post(url=self.info["url"], data=self.info["data"], session_id=self.info["session_id"], files=self.info["files"])
+            response.raise_for_status()  # 检查 HTTP 请求是否成功
+            json_data = response.json()  # 解析返回的 JSON 数据
+            self.progress.emit(json_data)  # 发射 JSON 数据
+        except requests.RequestException as e:
+            self.progress.emit({"error": str(e)})  # 处理请求错误并发射错误信息
+
+
+
 class OTA_MainWindow(config_path.UIConfigPath):
     options = QtWidgets.QFileDialog.Options()
     options |= QtWidgets.QFileDialog.ReadOnly
@@ -107,19 +126,36 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         ota_info["url"] = url
         ota_info["file_path"] = file_new_path
         ota_info["file_dir"] = conf_path.ota_split_path
-        session_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background, self.ui_config.option_session_id)
+        session_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                     self.ui_config.option_session_id)
         ota_info["session_id"] = session_id
-        result = pul.upload_lot(ota_info)
-        print(result)
+        json_data_list, file_binaries = pul.upload_lot(ota_info)
+        thread_info = {}
+        thread_info["data"] = json_data_list[0]
+        thread_info["url"] = url
+        thread_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                   self.ui_config.option_session_id)
+        thread_info["files"] = file_binaries[0]
+
+        self.worker = PostRequestWorker(thread_info)
+        self.worker.progress.connect(self.upload_response)  # Connect signal to slot
+        self.worker.start()
+
         # [{'code': 100000, 'message': 'success', 'data': {'destination': 'http://192.168.0.32:8000/fileStatic/tmp/55/ota/1_T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip'}}]
 
+    def upload_response(self, json_data):
+        print("=====================")
+        print(json_data)
+
     def handle_select(self):
-        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(None, "选择OTA文件", "", "Zip Files (*.zip)", options=self.options)
+        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(None, "选择OTA文件", "", "Zip Files (*.zip)",
+                                                             options=self.options)
         self.ota_edit.setText(file_name)
 
 
 if __name__ == '__main__':
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     ota_ui = OTA_UI()
     ota_ui.show()

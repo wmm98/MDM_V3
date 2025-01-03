@@ -2,6 +2,20 @@ import os.path
 import requests
 from datetime import datetime
 import hashlib
+from PyQt5 import QtWidgets, QtCore
+
+
+class PostRequestWorker(QtCore.QThread):
+    progress = QtCore.pyqtSignal(str)
+
+    def __init__(self, url, data):
+        super().__init__()
+        self.url = url
+        self.data = data
+
+    def run(self):
+        response = requests.post(self.url, data=self.data)
+        self.progress.emit(response.text)
 
 
 class public_:
@@ -25,24 +39,27 @@ class public_:
         jason_data["block_size"] = 10485760
         jason_data["multil_block"] = "true"
         appSecret = "c9537edd37521e415460b45b25a7ffdc"
+        file_binaries = []
+        jason_data_list = []
         if file_size > 10485760:
             file_parts = self.split_file(info["file_path"], info["file_dir"])
             jason_data['total_blocks'] = len(file_parts)
             time_stamp = str(int(datetime.now().timestamp()))
             token = self.generate_token(appSecret, file_name, time_stamp)
             for i in range(len(file_parts)):
+                current_jason_data = jason_data.copy()
+                current_jason_data['index'] = i + 1
+                current_jason_data['token'] = token
+                current_jason_data['timestamp'] = time_stamp
                 with open(file_parts[i], 'rb') as file:
-                    jason_data['index'] = i + 1
-                    token = self.generate_token(appSecret, file_name, time_stamp)
-                    jason_data['token'] = token
-                    jason_data['timestamp'] = time_stamp
                     file = {'data': (file_parts[i], file.read(), 'multipart/form-data')}
-                    print(jason_data)
 
-                    response = self.m_post(info["url"], session_id=info['session_id'].strip(), files=file, data=jason_data)
-                    print(response.json())
-                    responses_list.append(response.json())
-            return responses_list
+                    jason_data_list.append(current_jason_data)
+                    file_binaries.append(file)
+                    # response = self.m_post(info["url"], session_id=info['session_id'].strip(), files=file, data=jason_data)
+                    # print(response.json())
+                    # responses_list.append(response.json())
+            return jason_data_list, file_binaries
         else:
             jason_data['total_blocks'] = 1
             jason_data['index'] = 1
@@ -52,9 +69,12 @@ class public_:
             jason_data['timestamp'] = time_stamp
             with open(info["file_path"], 'rb') as file:
                 file = {'data': (file_name, file.read(), 'multipart/form-data')}
-                response = self.m_post(info["url"], session_id=info['session_id'], files=file, data=jason_data)
-                responses_list.append(response.json())
-            return responses_list
+                jason_data_list.append(jason_data)
+                file_binaries.append(file)
+            #     response = self.m_post(info["url"], session_id=info['session_id'], files=file, data=jason_data)
+            #     responses_list.append(response.json())
+            # return responses_list
+            return jason_data_list, file_binaries
 
     def split_file(self, file_path, new_dir, chunk_size=10 * 1024 * 1024):
         file_number = 1
