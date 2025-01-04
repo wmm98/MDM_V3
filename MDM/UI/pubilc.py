@@ -23,7 +23,6 @@ class public_:
         pass
 
     def upload_lot(self, info):
-        print(info)
         """
         url, file_path, split_file_dir, session_id
         :param info:

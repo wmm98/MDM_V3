@@ -28,6 +28,8 @@ class PostRequestWorker(QtCore.QThread):
             json_data = response.json()  # 解析返回的 JSON 数据
             self.progress.emit(json_data)  # 发射 JSON 数据
         except requests.RequestException as e:
+            print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+            print(e)
             self.progress.emit({"error": str(e)})  # 处理请求错误并发射错误信息
 
 
@@ -126,26 +128,53 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         ota_info["url"] = url
         ota_info["file_path"] = file_new_path
         ota_info["file_dir"] = conf_path.ota_split_path
-        session_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+        self.session_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
                                                      self.ui_config.option_session_id)
-        ota_info["session_id"] = session_id
-        json_data_list, file_binaries = pul.upload_lot(ota_info)
-        thread_info = {}
-        thread_info["data"] = json_data_list[0]
-        thread_info["url"] = url
-        thread_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
-                                                                   self.ui_config.option_session_id)
-        thread_info["files"] = file_binaries[0]
+        ota_info["session_id"] = self.session_id
+        self.json_data_list, self.file_binaries = pul.upload_lot(ota_info)
+        self.upload_flag = 0
+        self.current_upload_index = 0
+        self.start_next_upload()
 
-        self.worker = PostRequestWorker(thread_info)
-        self.worker.progress.connect(self.upload_response)  # Connect signal to slot
-        self.worker.start()
+        # for i in range(len(self.json_data_list)):
+        #     thread_info = {}
+        #     thread_info["data"] = self.json_data_list[i]
+        #     thread_info["url"] = url
+        #     thread_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+        #                                                                self.ui_config.option_session_id)
+        #     thread_info["files"] = self.file_binaries[i]
+        #     # thread_params.append(thread_info)
+        #     self.worker = PostRequestWorker(thread_info)
+        #     self.worker.progress.connect(self.upload_response)  # Connect signal to slot
 
-        # [{'code': 100000, 'message': 'success', 'data': {'destination': 'http://192.168.0.32:8000/fileStatic/tmp/55/ota/1_T10_qcm2290_sv12_fv2.1.7_pv2.1.7-9.9.9.zip'}}]
+    def start_next_upload(self):
+        url = "http://192.168.0.30:8080/api/v1/upload/ota"
+        if self.current_upload_index < len(self.json_data_list):
+            thread_info = {}
+            thread_info["data"] = self.json_data_list[self.current_upload_index]
+            thread_info["url"] = url
+            thread_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                        self.ui_config.option_session_id)
+            thread_info["files"] = self.file_binaries[self.current_upload_index]
+            self.worker = PostRequestWorker(thread_info)
+            self.worker.progress.connect(self.upload_response)
+            self.worker.start()
+        else:
+            QtWidgets.QMessageBox.information(None, "提示", "所有文件上传成功")
 
     def upload_response(self, json_data):
-        print("=====================")
+        print("================================")
         print(json_data)
+        if "error" not in json_data:
+            if json_data["code"] == 100000:
+                self.upload_flag += 1
+            self.current_upload_index += 1
+            self.start_next_upload()
+
+            if self.upload_flag == len(self.json_data_list):
+                QtWidgets.QMessageBox.information(None, "提示", "上传成功")
+        else:
+            QtWidgets.QMessageBox.warning(None, "提示", json_data["error"])
 
     def handle_select(self):
         file_name, _ = QtWidgets.QFileDialog.getOpenFileName(None, "选择OTA文件", "", "Zip Files (*.zip)",
