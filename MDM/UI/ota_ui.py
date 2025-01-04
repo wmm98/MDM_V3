@@ -161,6 +161,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.worker.start()
         else:
             QtWidgets.QMessageBox.information(None, "提示", "所有文件上传成功")
+            return
 
     def upload_response(self, json_data):
         print("================================")
@@ -171,10 +172,11 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.current_upload_index += 1
             self.start_next_upload()
 
-            if self.upload_flag == len(self.json_data_list):
+            if self.current_upload_index == len(self.json_data_list):
                 QtWidgets.QMessageBox.information(None, "提示", "上传成功")
         else:
             QtWidgets.QMessageBox.warning(None, "提示", json_data["error"])
+            return
 
     def handle_select(self):
         file_name, _ = QtWidgets.QFileDialog.getOpenFileName(None, "选择OTA文件", "", "Zip Files (*.zip)",
