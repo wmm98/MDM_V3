@@ -109,6 +109,15 @@ class public_:
             response = requests.post(url, data=data, json=json, files=files, headers=headers, **kwargs)
             return response
 
+    def m_get(self, url, session_id=None, params=None, **kwargs):
+        if session_id is None:
+            response = requests.get(url, params=params, **kwargs)
+            return response
+        else:
+            headers = {'Sessionid': session_id}
+            response = requests.get(url, params=params, headers=headers, **kwargs)
+            return response
+
 
 if __name__ == '__main__':
     public = public_()

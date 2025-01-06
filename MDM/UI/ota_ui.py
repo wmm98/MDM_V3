@@ -9,28 +9,10 @@ import shutil
 import config_path
 import configfile
 from pubilc import public_
+from request_thread import *
 
 conf_path = config_path.UIConfigPath()
 pul = public_()
-
-
-
-class PostRequestWorker(QtCore.QThread):
-    progress = QtCore.pyqtSignal(dict)  # 修改信号类型为字典
-
-    def __init__(self, info):
-        super().__init__()
-        self.info = info
-
-    def run(self):
-        try:
-            response = pul.m_post(url=self.info["url"], data=self.info["data"], session_id=self.info["session_id"], files=self.info["files"])
-            response.raise_for_status()  # 检查 HTTP 请求是否成功
-            json_data = response.json()  # 解析返回的 JSON 数据
-            self.progress.emit(json_data)  # 发射 JSON 数据
-        except requests.RequestException as e:
-            self.progress.emit({"error": str(e)})  # 处理请求错误并发射错误信息
-
 
 class OTA_MainWindow(config_path.UIConfigPath):
     options = QtWidgets.QFileDialog.Options()
@@ -65,6 +47,22 @@ class OTA_MainWindow(config_path.UIConfigPath):
         ota_info_layout.addWidget(self.upload_button)
         ota_info_layout.addStretch(1)
         self.verticalLayout_left.addLayout(ota_info_layout)
+        self.verticalLayout_left.addWidget(QLabel())
+
+        # 显示接口中的前10页的ota包，在可选框中显示这些包
+        layout_ota_info = QHBoxLayout()
+        self.ota_list_box = QComboBox(self)
+        self.ota_list_box.setFixedWidth(central_length // 2 + 100)
+        self.get_ota_list_button = QtWidgets.QPushButton("获取ota列表")
+        self.delete_ota_button = QtWidgets.QPushButton("删除ota")
+        self.delete_all = QtWidgets.QPushButton("删除全部")
+        layout_ota_info.addWidget(self.ota_list_box)
+        layout_ota_info.addWidget(self.get_ota_list_button)
+        layout_ota_info.addWidget(self.delete_ota_button)
+        layout_ota_info.addWidget(self.delete_all)
+        layout_ota_info.addStretch(1)
+        self.verticalLayout_left.addLayout(layout_ota_info)
+        self.verticalLayout_left.addWidget(QLabel())
 
         # 设置压测次数
         layout_test_time_info = QHBoxLayout()
@@ -80,7 +78,6 @@ class OTA_MainWindow(config_path.UIConfigPath):
         layout_test_time_info.addStretch(1)
         self.verticalLayout_left.addLayout(layout_test_time_info)
         self.verticalLayout_left.addWidget(QLabel())
-
 
         self.submit_button  = QPushButton("保存配置")
         self.verticalLayout_left.addWidget(self.submit_button)
@@ -118,12 +115,50 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         pass
 
     def init_signal_slot(self):
-        # self.submit_button.clicked.connect(self.handle_submit)
+        self.submit_button.clicked.connect(self.handle_submit)
         # self.stop_process_button.clicked.connect(self.handle_stop)
         # self.login_button.clicked.connect(self.handle_login)
         # self.captcha_button.clicked.connect(self.handle_captcha)
         self.select_button.clicked.connect(self.handle_select)
         self.upload_button.clicked.connect(self.handle_upload)
+        # self.get_ota_list_button.clicked.connect(self.list_ota_packages)
+        self.list_ota_packages()
+
+    def list_ota_packages(self):
+        self.ota_list_flag = 1
+        self.ota_packages_list = []
+        self.start_next_get_ota_list()
+        self.ota_list_box.addItems(self.ota_packages_list)
+
+    def start_next_get_ota_list(self):
+        thr_info = {}
+        url = "http://192.168.0.30:8080/api/v1/ota/packages"
+        thr_info["url"] = url
+        param = {}
+        param["page"] = 1
+        param["pageSize"] = 10
+        departmentID = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                           self.ui_config.option_department_id))
+        param["departmentId"] = departmentID
+        param["order"] = "id"
+        param["sort"] = "desc"
+        thr_info["params"] = param
+
+        session_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background, self.ui_config.option_session_id)
+        thr_info["session_id"] = session_id
+        self.otas_worker = GetRequestWorker(thr_info)
+        self.otas_worker.progress.connect(self.handle_ota_list_response)
+        self.otas_worker.start()
+
+    def handle_ota_list_response(self, json_data):
+        print(json_data)
+        if self.ota_list_flag < 5:
+            if "error" not in json_data:
+                # self.
+                # self.ota_list_box.addItems(json_data.get("ota_packages", []))
+                self.ota_list_flag += 1
+        else:
+            QtWidgets.QMessageBox.warning(None, "提示", json_data["error"])
 
     def handle_submit(self):
         pass
@@ -152,19 +187,6 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.upload_flag = 0
         self.current_upload_index = 0
         self.start_next_upload()
-        # 保存下此次想要跑的ota
-
-
-        # for i in range(len(self.json_data_list)):
-        #     thread_info = {}
-        #     thread_info["data"] = self.json_data_list[i]
-        #     thread_info["url"] = url
-        #     thread_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
-        #                                                                self.ui_config.option_session_id)
-        #     thread_info["files"] = self.file_binaries[i]
-        #     # thread_params.append(thread_info)
-        #     self.worker = PostRequestWorker(thread_info)
-        #     self.worker.progress.connect(self.upload_response)  # Connect signal to slot
 
     def start_next_upload(self):
         url = "http://192.168.0.30:8080/api/v1/upload/ota"
@@ -180,8 +202,6 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.worker.start()
 
     def upload_response(self, json_data):
-        print("================================")
-        print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 self.upload_flag += 1
@@ -190,6 +210,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
 
             if self.current_upload_index == len(self.json_data_list):
                 QtWidgets.QMessageBox.information(None, "提示", "ota包上传成功")
+                return
         else:
             QtWidgets.QMessageBox.warning(None, "提示", json_data["error"])
             return
