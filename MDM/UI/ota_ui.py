@@ -156,9 +156,15 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             if "error" not in json_data:
                 # self.
                 # self.ota_list_box.addItems(json_data.get("ota_packages", []))
-                self.ota_list_flag += 1
+                if json_data["code"] == 100000:
+                    if json_data["data"]['otas'] is not None:
+                        self.ota_list_flag += 1
+                        for pack in json_data["data"]["otas"]:
+                            self.ota_packages_list.append(pack["name"])
+                    else:
+                        self.ota_list_box.addItems(self.ota_packages_list)
         else:
-            QtWidgets.QMessageBox.warning(None, "提示", json_data["error"])
+            self.ota_list_box.addItems(self.ota_packages_list)
 
     def handle_submit(self):
         pass
