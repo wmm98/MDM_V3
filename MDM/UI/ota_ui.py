@@ -14,6 +14,7 @@ conf_path = config_path.UIConfigPath()
 pul = public_()
 
 
+
 class PostRequestWorker(QtCore.QThread):
     progress = QtCore.pyqtSignal(dict)  # 修改信号类型为字典
 
