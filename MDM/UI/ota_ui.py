@@ -3,7 +3,7 @@ import os
 import requests
 from Demos.win32ts_logoff_disconnected import session
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QComboBox, QButtonGroup, QWidget, QSplitter, QTextEdit
+from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QComboBox, QButtonGroup, QWidget, QSplitter, QTextEdit, QPushButton, QLabel
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
 import shutil
 import config_path
@@ -28,10 +28,7 @@ class PostRequestWorker(QtCore.QThread):
             json_data = response.json()  # 解析返回的 JSON 数据
             self.progress.emit(json_data)  # 发射 JSON 数据
         except requests.RequestException as e:
-            print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-            print(e)
             self.progress.emit({"error": str(e)})  # 处理请求错误并发射错误信息
-
 
 
 class OTA_MainWindow(config_path.UIConfigPath):
@@ -67,6 +64,25 @@ class OTA_MainWindow(config_path.UIConfigPath):
         ota_info_layout.addWidget(self.upload_button)
         ota_info_layout.addStretch(1)
         self.verticalLayout_left.addLayout(ota_info_layout)
+
+        # 设置压测次数
+        layout_test_time_info = QHBoxLayout()
+        self.test_times_label = QLabel("压测次数")
+        self.test_times = QComboBox(self)
+        self.test_times.setEditable(True)
+        probability_test_label = QLabel("是否进行失败概率性统计")
+        self.is_probability_test = QCheckBox()
+        layout_test_time_info.addWidget(self.test_times_label)
+        layout_test_time_info.addWidget(self.test_times)
+        layout_test_time_info.addWidget(probability_test_label)
+        layout_test_time_info.addWidget(self.is_probability_test)
+        layout_test_time_info.addStretch(1)
+        self.verticalLayout_left.addLayout(layout_test_time_info)
+        self.verticalLayout_left.addWidget(QLabel())
+
+
+        self.submit_button  = QPushButton("保存配置")
+        self.verticalLayout_left.addWidget(self.submit_button)
 
         self.verticalLayout_left.addStretch(1)
         self.verticalLayout_left.setSpacing(10)  # 崔直布局的间距为10像素
@@ -135,6 +151,8 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.upload_flag = 0
         self.current_upload_index = 0
         self.start_next_upload()
+        # 保存下此次想要跑的ota
+
 
         # for i in range(len(self.json_data_list)):
         #     thread_info = {}
@@ -159,9 +177,6 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.worker = PostRequestWorker(thread_info)
             self.worker.progress.connect(self.upload_response)
             self.worker.start()
-        else:
-            QtWidgets.QMessageBox.information(None, "提示", "所有文件上传成功")
-            return
 
     def upload_response(self, json_data):
         print("================================")
@@ -173,7 +188,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.start_next_upload()
 
             if self.current_upload_index == len(self.json_data_list):
-                QtWidgets.QMessageBox.information(None, "提示", "上传成功")
+                QtWidgets.QMessageBox.information(None, "提示", "ota包上传成功")
         else:
             QtWidgets.QMessageBox.warning(None, "提示", json_data["error"])
             return
