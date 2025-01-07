@@ -3,7 +3,7 @@ import os
 import requests
 from Demos.win32ts_logoff_disconnected import session
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QComboBox, QButtonGroup, QWidget, QSplitter, QTextEdit, QPushButton, QLabel
+from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QComboBox, QButtonGroup, QWidget, QSplitter, QTextEdit, QPushButton, QLabel, QMessageBox
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
 import shutil
 import config_path
@@ -138,7 +138,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         url = "http://192.168.0.30:8080/api/v1/ota/packages"
         thr_info["url"] = url
         param = {}
-        param["page"] = 1
+        param["page"] = self.ota_list_flag
         param["pageSize"] = 10
         departmentID = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
                                                            self.ui_config.option_department_id))
@@ -157,14 +157,12 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         print(json_data)
         if self.ota_list_flag < 10:
             if "error" not in json_data:
-
                 if json_data["code"] == 100000:
                     if json_data["data"]['otas'] is not None:
                         self.ota_list_flag += 1
                         for pack in json_data["data"]["otas"]:
                             self.ota_packages_list.append(pack["name"])
-
-                    if len(self.ota_packages_list) == json_data["data"]["total"]:
+                    else:
                         self.ota_list_box.addItems(self.ota_packages_list)
                         return
 
@@ -212,6 +210,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.worker.start()
 
     def upload_response(self, json_data):
+        print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 self.upload_flag += 1
@@ -219,11 +218,66 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.start_next_upload()
 
             if self.current_upload_index == len(self.json_data_list):
+                self.parsing_ota_package(json_data)
                 QtWidgets.QMessageBox.information(None, "提示", "ota包上传成功")
                 return
         else:
             QtWidgets.QMessageBox.warning(None, "提示", json_data["error"])
             return
+
+    def parsing_ota_package(self, json_data):
+        url = "http://192.168.0.30:8080/api/v1/ota/packages/upload"
+        th_info = {}
+        data = {}
+        department_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background, self.ui_config.option_department_id)
+        data["departmentId"] = department_id
+        data["url"] = json_data["url"]
+        th_info["data"] = data
+        th_info["url"] = url
+        th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background, self.ui_config.option_session_id)
+
+        self.parase_worker = PostRequestWorker(th_info)
+        self.parase_worker.progress.connect(self.handle_parsing_response)
+        self.parase_worker.start()
+
+    def handle_parsing_response(self, json_data):
+        print(json_data)
+        if "error" not in json_data:
+            if json_data["code"] == 100000:
+                self.update_ota_package(json_data)
+        else:
+            QMessageBox.warning(None, "提示", json_data["error"])
+
+    def update_ota_package(self, json_data):
+        url = "http://192.168.0.30:8080/api/v1/ota/packages/create"
+        th_info = {}
+        data = {}
+        department_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                        self.ui_config.option_department_id)
+        data["departmentId"] = department_id
+        data["url"] = json_data["url"]
+        data["description"] = ""
+        ota_name = json_data["data"]["url"].rsplit("/", 1)[1]
+        #"T10_qcm2290_sv12_fv2.0.7_pv2.0.7-9.9.9.zip"
+        print(ota_name)
+        info_list = ota_name.split("_")
+        data["devModel"] = info_list[0]
+        data["firmwareVersion"] = info_list[3]
+        data["md5Sum"] = pul.get_md5sum(self.ota_edit.text())
+        data["name"] = ota_name
+        data["otaType"] = 0
+        data["size"] = os.path.getsize(self.ota_edit.text())
+        data["systemVersion"] = info_list[2]
+        data["version"] = info_list[-1]
+
+        th_info["data"] = data
+        th_info["url"] = url
+        th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                self.ui_config.option_session_id)
+
+
+    def handle_update_response(self, json_data):
+        pass
 
     def handle_select(self):
         file_name, _ = QtWidgets.QFileDialog.getOpenFileName(None, "选择OTA文件", "", "Zip Files (*.zip)",

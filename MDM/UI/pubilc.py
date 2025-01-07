@@ -95,10 +95,12 @@ class public_:
     def generate_token(self, appSecret, filename, timestamp):
         # 拼接字符串
         to_hash = appSecret + "&" + filename + "&" + timestamp
-        # print(to_hash)
-        # 计算MD5哈希
-        md5_hash = hashlib.md5(to_hash.encode()).hexdigest()
-        return md5_hash
+        # 计算token值
+        token = self.get_md5sum(to_hash)
+        return token
+
+    def get_md5sum(self, file):
+        return hashlib.md5(file.encode()).hexdigest()
 
     def m_post(self, url, session_id=None, files=None, data=None, json=None, **kwargs):
         if session_id is None:
