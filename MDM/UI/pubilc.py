@@ -120,6 +120,11 @@ class public_:
             response = requests.get(url, params=params, headers=headers, **kwargs)
             return response
 
+    def m_delete(self, url, session_id, json=None, **kwargs):
+        headers = {'Sessionid': session_id}
+        response = requests.delete(url, json=json, headers=headers, **kwargs)
+        return response
+
 
 if __name__ == '__main__':
     public = public_()

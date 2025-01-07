@@ -115,14 +115,89 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         pass
 
     def init_signal_slot(self):
-        # self.get_ota_list_button.clicked.connect(self.list_ota_packages)
         self.list_ota_packages()
+        self.get_ota_list_button.clicked.connect(self.list_ota_packages)
         self.submit_button.clicked.connect(self.handle_submit)
         # self.stop_process_button.clicked.connect(self.handle_stop)
         # self.login_button.clicked.connect(self.handle_login)
         # self.captcha_button.clicked.connect(self.handle_captcha)
         self.select_button.clicked.connect(self.handle_select)
         self.upload_button.clicked.connect(self.handle_upload)
+        self.delete_ota_button.clicked.connect(self.handle_delete_ota)
+
+    def handle_delete_ota(self):
+        self.ota_id_flag = 0
+        if self.ota_list_box.currentText():
+            self.delete_ota_name = os.path.basename(self.ota_list_box.currentText())
+            # 先查询ota包，获取ota_id
+            self.query_ota_package()
+
+    def delete_ota_package(self, ota_id):
+        url = "http://192.168.0.30:8080/api/v1/ota/packages/delete"
+        th_info = {}
+        th_info["url"] = url
+        th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                self.ui_config.option_session_id)
+        json = {}
+        json["isSiSafe"] = False
+        json["ids"] = [ota_id]
+        th_info["json"] = json
+
+        self.delete_worker = DeleteRequestWorker(th_info)
+        self.delete_worker.progress.connect(self.handle_delete_ota_response)
+        self.delete_worker.start()
+
+    def handle_delete_ota_response(self, json_data):
+        print(json_data)
+        if "error" not in json_data:
+            if json_data["code"] == 100000:
+                QMessageBox.information(None, "提示", "删除ota包成功")
+                return
+            else:
+                QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+        else:
+            QMessageBox.warning(None, "提示", "删除ota包失败：%s" % json_data["error"])
+
+    def query_ota_package(self):
+        url = "http://192.168.0.30:8080/api/v1/ota/packages"
+        th_info = {}
+        th_info["url"] = url
+        th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                self.ui_config.option_session_id)
+
+        param = {}
+        param["page"] = 1
+        param["pageSize"] = 10
+        param["order"] = "id"
+        param["sort"] = "desc"
+        param["departmentId"] = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                               self.ui_config.option_department_id))
+        th_info["params"] = param
+
+        print(th_info)
+        self.query_worker = GetRequestWorker(th_info)
+        self.query_worker.progress.connect(self.handle_query_response)
+        self.query_worker.start()
+
+    def handle_query_response(self, json_data):
+        print("查询########################")
+        print(json_data)
+        if self.ota_id_flag < 10:
+            if "error" not in json_data:
+                if json_data["code"] == 100000:
+                    if json_data["data"]["otas"] is not None:
+                        self.ota_id_flag += 1
+                        for pack in json_data["data"]["otas"]:
+                            if pack["name"] == os.path.basename(self.ota_list_box.currentText()):
+                                ota_id = pack["id"]
+                                self.delete_ota_package(ota_id)
+                else:
+                    QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+            else:
+                QtWidgets.QMessageBox.warning(None, "提示", "查询ota包失败：%s" % json_data["error"])
+        else:
+            QtWidgets.QMessageBox.warning(None, "提示", "查询ota包失败：%s" % json_data["error"])
+
 
     def list_test_times(self):
         test_times = [str(i * 5) for i in range(1, 500)]
@@ -163,6 +238,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
                         for pack in json_data["data"]["otas"]:
                             self.ota_packages_list.append(pack["name"])
                     else:
+                        self.ota_list_box.clear()
                         self.ota_list_box.addItems(self.ota_packages_list)
                         return
 
@@ -219,8 +295,6 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
 
             if self.current_upload_index == len(self.json_data_list):
                 self.parsing_ota_package(json_data)
-                QtWidgets.QMessageBox.information(None, "提示", "ota包上传成功")
-                return
         else:
             QtWidgets.QMessageBox.warning(None, "提示", json_data["error"])
             return
@@ -229,18 +303,18 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         url = "http://192.168.0.30:8080/api/v1/ota/packages/upload"
         th_info = {}
         data = {}
-        department_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background, self.ui_config.option_department_id)
+        department_id = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background, self.ui_config.option_department_id))
         data["departmentId"] = department_id
-        data["url"] = json_data["url"]
-        th_info["data"] = data
+        data["url"] = json_data["data"]["destination"]
+        th_info["json"] = data
         th_info["url"] = url
         th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background, self.ui_config.option_session_id)
-
         self.parase_worker = PostRequestWorker(th_info)
         self.parase_worker.progress.connect(self.handle_parsing_response)
         self.parase_worker.start()
 
     def handle_parsing_response(self, json_data):
+        print("解析########################")
         print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
@@ -254,31 +328,39 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         data = {}
         department_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
                                                         self.ui_config.option_department_id)
-        data["departmentId"] = department_id
-        data["url"] = json_data["url"]
+        data["departmentId"] = int(department_id)
         data["description"] = ""
-        ota_name = json_data["data"]["url"].rsplit("/", 1)[1]
-        #"T10_qcm2290_sv12_fv2.0.7_pv2.0.7-9.9.9.zip"
-        print(ota_name)
-        info_list = ota_name.split("_")
-        data["devModel"] = info_list[0]
-        data["firmwareVersion"] = info_list[3]
-        data["md5Sum"] = pul.get_md5sum(self.ota_edit.text())
-        data["name"] = ota_name
+        data["downloadUrl"] = json_data["data"]["downloadUrl"]
+        data["devModel"] = json_data["data"]["devModel"]
+        data["downloadUrl"] = json_data["data"]["downloadUrl"]
+        data["firmwareVersion"] = json_data["data"]["firmwareVersion"]
+        data["md5Sum"] = json_data["data"]["md5Sum"]
+        data["name"] = json_data["data"]["name"]
         data["otaType"] = 0
-        data["size"] = os.path.getsize(self.ota_edit.text())
-        data["systemVersion"] = info_list[2]
-        data["version"] = info_list[-1]
+        data["size"] = json_data["data"]["size"]
+        data["systemVersion"] = json_data["data"]["systemVersion"]
+        data["version"] = json_data["data"]["version"]
+        data["wirelessModule"] = json_data["data"]["wirelessModule"]
 
-
-        th_info["data"] = data
+        th_info["json"] = data
         th_info["url"] = url
         th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
                                                                 self.ui_config.option_session_id)
-
+        self.update_worker = PostRequestWorker(th_info)
+        self.update_worker.progress.connect(self.handle_update_response)
+        self.update_worker.start()
 
     def handle_update_response(self, json_data):
-        pass
+        print("更新#######################")
+        print(json_data)
+        if "error" not in json_data:
+            if json_data["code"] == 100000:
+                QMessageBox.information(None, "提示", "ota包上传成功")
+                return
+            else:
+                QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+        else:
+            QMessageBox.warning(None, "提示", "ota上传失败：%s" % json_data["error"])
 
     def handle_select(self):
         file_name, _ = QtWidgets.QFileDialog.getOpenFileName(None, "选择OTA文件", "", "Zip Files (*.zip)",

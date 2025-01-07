@@ -371,3 +371,5 @@ if __name__ == '__main__':
     myshow.display_captcha()
     myshow.show()
     app.exec_()
+
+    #
