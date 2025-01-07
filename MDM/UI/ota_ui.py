@@ -51,7 +51,7 @@ class OTA_MainWindow(config_path.UIConfigPath):
 
         # 显示接口中的前10页的ota包，在可选框中显示这些包
         layout_ota_info = QHBoxLayout()
-        self.ota_list_box = QComboBox(self)
+        self.ota_list_box = QComboBox()
         self.ota_list_box.setFixedWidth(central_length // 2 + 100)
         self.get_ota_list_button = QtWidgets.QPushButton("获取ota列表")
         self.delete_ota_button = QtWidgets.QPushButton("删除ota")
@@ -67,7 +67,7 @@ class OTA_MainWindow(config_path.UIConfigPath):
         # 设置压测次数
         layout_test_time_info = QHBoxLayout()
         self.test_times_label = QLabel("压测次数")
-        self.test_times = QComboBox(self)
+        self.test_times = QComboBox()
         self.test_times.setEditable(True)
         probability_test_label = QLabel("是否进行失败概率性统计")
         self.is_probability_test = QCheckBox()
@@ -115,20 +115,23 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         pass
 
     def init_signal_slot(self):
+        # self.get_ota_list_button.clicked.connect(self.list_ota_packages)
+        self.list_ota_packages()
         self.submit_button.clicked.connect(self.handle_submit)
         # self.stop_process_button.clicked.connect(self.handle_stop)
         # self.login_button.clicked.connect(self.handle_login)
         # self.captcha_button.clicked.connect(self.handle_captcha)
         self.select_button.clicked.connect(self.handle_select)
         self.upload_button.clicked.connect(self.handle_upload)
-        # self.get_ota_list_button.clicked.connect(self.list_ota_packages)
-        self.list_ota_packages()
+
+    def list_test_times(self):
+        test_times = [str(i * 5) for i in range(1, 500)]
+        self.test_times.addItems(test_times)
 
     def list_ota_packages(self):
         self.ota_list_flag = 1
         self.ota_packages_list = []
         self.start_next_get_ota_list()
-        self.ota_list_box.addItems(self.ota_packages_list)
 
     def start_next_get_ota_list(self):
         thr_info = {}
@@ -152,19 +155,20 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
 
     def handle_ota_list_response(self, json_data):
         print(json_data)
-        if self.ota_list_flag < 5:
+        if self.ota_list_flag < 10:
             if "error" not in json_data:
-                # self.
-                # self.ota_list_box.addItems(json_data.get("ota_packages", []))
+
                 if json_data["code"] == 100000:
                     if json_data["data"]['otas'] is not None:
                         self.ota_list_flag += 1
                         for pack in json_data["data"]["otas"]:
                             self.ota_packages_list.append(pack["name"])
-                    else:
+
+                    if len(self.ota_packages_list) == json_data["data"]["total"]:
                         self.ota_list_box.addItems(self.ota_packages_list)
-        else:
-            self.ota_list_box.addItems(self.ota_packages_list)
+                        return
+
+                    self.start_next_get_ota_list()
 
     def handle_submit(self):
         pass
