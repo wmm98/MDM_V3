@@ -270,6 +270,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         data["systemVersion"] = info_list[2]
         data["version"] = info_list[-1]
 
+
         th_info["data"] = data
         th_info["url"] = url
         th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
