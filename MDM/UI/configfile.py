@@ -6,15 +6,6 @@ class ConfigP(UIConfigPath):
     section_ui_to_background = "UI-Background"
     section_background_to_ui = "Background-UI"
 
-    # 接口相关
-    section_web_interface = "Web-Interface"
-    option_session_id = "session_id"
-    option_department_id = "department_id"
-
-    section_ota_interface = "OTA"
-
-
-
     # 公共
     ui_option_device_name = "device_name"
     bg_option_devices_name = "devices_name"
@@ -26,6 +17,17 @@ class ConfigP(UIConfigPath):
     test_interval = "rounds_interval"
     # 通用模块的关到开的时长
     bt_interval = "bt_interval"
+
+    # 接口相关
+    section_web_interface = "Web-Interface"
+    option_session_id = "session_id"
+    option_department_id = "department_id"
+
+    section_ota_interface = "OTA"
+    option_ota_name = "ota_name"
+    option_ota_id = "ota_id"
+    option_ota_is_part_silent = "ota_part_silent"
+    option_ota_is_not_silent = "ota_not_silent"
 
     def __init__(self, ini_path):
         self.ini_path = ini_path
@@ -52,3 +54,7 @@ class ConfigP(UIConfigPath):
     def get_option_value(self, section, option):
         self.config.read(self.ini_path)
         return self.config.get(section, option)
+
+    def option_exist(self, section, option):
+        self.config.read(self.ini_path)
+        return self.config.has_option(section, option)

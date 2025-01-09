@@ -13,6 +13,7 @@ import os
 import requests
 import configfile
 import config_path
+from ota_ui import OTA_UI
 
 conf_path = config_path.UIConfigPath()
 
@@ -50,17 +51,18 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.cases_selected_sum = 0
         self.uuid = None
 
+        self.ota_ui = OTA_UI()
+
     def inti_ui(self):
+        # 初始化ini文件
+        self.ui_config.init_config_file()
+        self.ui_config.add_config_section(self.ui_config.section_ui_to_background)
+
         # 初始化
         # 初始化图片cursor
         # self.cursor = QTextCursor(self.document)
         # self.cursor_camera = QTextCursor(self.document_camera)
 
-        self.ui_config.init_config_file()
-        self.ui_config.add_config_section(self.ui_config.section_ui_to_background)
-
-        # self.ui_config.init_config_file()
-        # self.ui_config.add_config_section(self.ui_config.section_ui_to_background)
         # 初始化进程
         self.qt_process = QProcess()
         self.submit_button.clicked.connect(self.handle_submit)
@@ -76,7 +78,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.treeWidget.expandAll()
         self.treeWidget.itemChanged.connect(self.handlechanged)
         # 用例树点击事件
-        # self.treeWidget.itemClicked.connect(self.on_item_clicked)
+        self.treeWidget.itemClicked.connect(self.on_item_clicked)
 
         self.captcha_button.clicked.connect(self.display_captcha)
         self.login_button.clicked.connect(self.login)
@@ -330,6 +332,16 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             result["children"].append(self.get_tree_item_status(child_item))
         return result
 
+    def on_item_clicked(self, item):
+        # 查看ini文件中登录的个人信息是否存在
+
+        if self.ui_config.get_option_value()
+
+        if item == self.item_S_T_STA_child_ota_test:
+            if item.checkState(0) == 2:
+                if not self.ota_ui.isVisible():
+                    self.ota_ui.show()
+
     def list_tree_cases(self):
         # 用例数结构
         # 设置列数
@@ -353,13 +365,13 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.item_S_T_STA.setCheckState(0, Qt.Unchecked)
         self.item_S_T_STA.setFlags(self.item_S_T_STA.flags() | Qt.ItemIsSelectable)
         # 立项测试子用例
-        self.item_S_T_STA_child_boot_check = QTreeWidgetItem(self.item_S_T_STA)
-        self.item_S_T_STA_child_boot_check.setText(0, "ota推送--正常压测")
-        self.item_S_T_STA_child_boot_check.setCheckState(0, Qt.Unchecked)
-        self.item_S_T_STA_child_boot_check.setText(1, "")
-        self.item_S_T_STA_child_boot_check.setText(2, "次")
-        self.item_S_T_STA_child_boot_check.setFlags(
-            self.item_S_T_STA_child_boot_check.flags() | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEditable)
+        self.item_S_T_STA_child_ota_test = QTreeWidgetItem(self.item_S_T_STA)
+        self.item_S_T_STA_child_ota_test.setText(0, "OTA推送压测")
+        self.item_S_T_STA_child_ota_test.setCheckState(0, Qt.Unchecked)
+        self.item_S_T_STA_child_ota_test.setText(1, "")
+        self.item_S_T_STA_child_ota_test.setText(2, "次")
+        self.item_S_T_STA_child_ota_test.setFlags(
+            self.item_S_T_STA_child_ota_test.flags() | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEditable)
 
 
 if __name__ == '__main__':

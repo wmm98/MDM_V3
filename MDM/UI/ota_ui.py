@@ -14,6 +14,7 @@ from request_thread import *
 conf_path = config_path.UIConfigPath()
 pul = public_()
 
+
 class OTA_MainWindow(config_path.UIConfigPath):
     options = QtWidgets.QFileDialog.Options()
     options |= QtWidgets.QFileDialog.ReadOnly
@@ -50,19 +51,37 @@ class OTA_MainWindow(config_path.UIConfigPath):
         self.verticalLayout_left.addWidget(QLabel())
 
         # 显示接口中的前10页的ota包，在可选框中显示这些包
+        self.verticalLayout_left.addWidget(QLabel("已上传的OTA列表："))
         layout_ota_info = QHBoxLayout()
         self.ota_list_box = QComboBox()
         self.ota_list_box.setFixedWidth(central_length // 2 + 100)
-        self.get_ota_list_button = QtWidgets.QPushButton("获取ota列表")
+        # self.get_ota_list_button = QtWidgets.QPushButton("获取ota列表")
         self.delete_ota_button = QtWidgets.QPushButton("删除ota")
-        self.delete_all = QtWidgets.QPushButton("删除全部")
+        # self.delete_all = QtWidgets.QPushButton("删除全部")
         layout_ota_info.addWidget(self.ota_list_box)
-        layout_ota_info.addWidget(self.get_ota_list_button)
+        # layout_ota_info.addWidget(self.get_ota_list_button)
         layout_ota_info.addWidget(self.delete_ota_button)
-        layout_ota_info.addWidget(self.delete_all)
+        # layout_ota_info.addWidget(self.delete_all)
         layout_ota_info.addStretch(1)
         self.verticalLayout_left.addLayout(layout_ota_info)
         self.verticalLayout_left.addWidget(QLabel())
+
+        # 选择ota安装方式
+        self.verticalLayout_left.addWidget(QLabel("选择OTA安装方式："))
+        layout_install_way = QHBoxLayout()
+        self.install_way_group = QButtonGroup()
+        # self.install_way_group.setExclusive(True)
+        self.install_not_silent = QCheckBox("静默安装")
+        self.install_part_silent = QCheckBox("半静默安装")
+        layout_install_way.addWidget(self.install_not_silent)
+        layout_install_way.addWidget(self.install_part_silent)
+        layout_install_way.addStretch(1)
+        self.verticalLayout_left.addLayout(layout_install_way)
+        self.verticalLayout_left.addWidget(QLabel())
+        # 只能选择一种方式安装
+        self.install_way_group.addButton(self.install_not_silent)
+        self.install_way_group.addButton(self.install_part_silent)
+
 
         # 设置压测次数
         layout_test_time_info = QHBoxLayout()
@@ -81,6 +100,13 @@ class OTA_MainWindow(config_path.UIConfigPath):
 
         self.submit_button  = QPushButton("保存配置")
         self.verticalLayout_left.addWidget(self.submit_button)
+        self.verticalLayout_left.addWidget(QLabel())
+        self.verticalLayout_left.addWidget(QLabel())
+
+        self.tips = QLabel("提示：\n请先在主界面登录再进行操作")
+        # 设置label字体颜色
+        self.tips.setStyleSheet("color:red")
+        self.verticalLayout_left.addWidget(self.tips)
 
         self.verticalLayout_left.addStretch(1)
         self.verticalLayout_left.setSpacing(10)  # 崔直布局的间距为10像素
@@ -116,7 +142,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
 
     def init_signal_slot(self):
         self.list_ota_packages()
-        self.get_ota_list_button.clicked.connect(self.list_ota_packages)
+        # self.get_ota_list_button.clicked.connect(self.list_ota_packages)
         self.submit_button.clicked.connect(self.handle_submit)
         # self.stop_process_button.clicked.connect(self.handle_stop)
         # self.login_button.clicked.connect(self.handle_login)
@@ -148,9 +174,9 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.delete_worker.start()
 
     def handle_delete_ota_response(self, json_data):
-        print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
+                self.list_ota_packages()
                 QMessageBox.information(None, "提示", "删除ota包成功")
                 return
             else:
@@ -164,7 +190,6 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         th_info["url"] = url
         th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
                                                                 self.ui_config.option_session_id)
-
         param = {}
         param["page"] = 1
         param["pageSize"] = 10
@@ -174,14 +199,11 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
                                                                self.ui_config.option_department_id))
         th_info["params"] = param
 
-        print(th_info)
         self.query_worker = GetRequestWorker(th_info)
         self.query_worker.progress.connect(self.handle_query_response)
         self.query_worker.start()
 
     def handle_query_response(self, json_data):
-        print("查询########################")
-        print(json_data)
         if self.ota_id_flag < 10:
             if "error" not in json_data:
                 if json_data["code"] == 100000:
@@ -197,7 +219,6 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
                 QtWidgets.QMessageBox.warning(None, "提示", "查询ota包失败：%s" % json_data["error"])
         else:
             QtWidgets.QMessageBox.warning(None, "提示", "查询ota包失败：%s" % json_data["error"])
-
 
     def list_test_times(self):
         test_times = [str(i * 5) for i in range(1, 500)]
@@ -229,7 +250,6 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.otas_worker.start()
 
     def handle_ota_list_response(self, json_data):
-        print(json_data)
         if self.ota_list_flag < 10:
             if "error" not in json_data:
                 if json_data["code"] == 100000:
@@ -286,7 +306,6 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.worker.start()
 
     def upload_response(self, json_data):
-        print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 self.upload_flag += 1
@@ -314,8 +333,6 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.parase_worker.start()
 
     def handle_parsing_response(self, json_data):
-        print("解析########################")
-        print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 self.update_ota_package(json_data)
@@ -351,10 +368,9 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.update_worker.start()
 
     def handle_update_response(self, json_data):
-        print("更新#######################")
-        print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
+                self.list_ota_packages()
                 QMessageBox.information(None, "提示", "ota包上传成功")
                 return
             else:
