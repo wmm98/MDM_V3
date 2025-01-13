@@ -44,15 +44,6 @@ class Ui_MainWindow(config_path.UIConfigPath):
         self.verticalLayout_left.addLayout(layout_device_info)
         self.verticalLayout_left.addWidget(QtWidgets.QLabel())
 
-        # 用例树
-        self.treeWidget = QtWidgets.QTreeWidget()
-        self.treeWidget.setSelectionMode(QtWidgets.QTreeWidget.ExtendedSelection)  # 设置多选模式
-        self.treeWidget.setObjectName("treeWidget")
-        self.treeWidget.headerItem().setText(0, "1")
-        self.treeWidget.setFixedHeight(400)
-        self.verticalLayout_left.addWidget(self.treeWidget)
-        self.verticalLayout_left.addWidget(QtWidgets.QLabel())
-
         user_info_layout = QHBoxLayout()
         self.label_user_name = QtWidgets.QLabel("用户名:")
         self.edit_user_name = QtWidgets.QLineEdit()
@@ -81,13 +72,26 @@ class Ui_MainWindow(config_path.UIConfigPath):
         layout_captcha_info.addWidget(self.edit_captcha)
         layout_captcha_info.addWidget(self.captcha_button)
         layout_captcha_info.addWidget(self.login_tips)
-
         layout_captcha_info.addStretch(1)
         self.verticalLayout_left.addLayout(layout_captcha_info)
         self.verticalLayout_left.addWidget(QtWidgets.QLabel())
 
-        self.login_button = QtWidgets.QPushButton("登录")
-        self.verticalLayout_left.addWidget(self.login_button)
+        login_layout = QHBoxLayout()
+        self.login_button = QtWidgets.QPushButton("登录测试服")
+        self.login_release_button = QtWidgets.QPushButton("登录正式服")
+        login_layout.addWidget(self.login_button)
+        login_layout.addWidget(self.login_release_button)
+        login_layout.addStretch(1)
+        self.verticalLayout_left.addLayout(login_layout)
+        self.verticalLayout_left.addWidget(QtWidgets.QLabel())
+
+        # 用例树
+        self.treeWidget = QtWidgets.QTreeWidget()
+        self.treeWidget.setSelectionMode(QtWidgets.QTreeWidget.ExtendedSelection)  # 设置多选模式
+        self.treeWidget.setObjectName("treeWidget")
+        self.treeWidget.headerItem().setText(0, "1")
+        self.treeWidget.setFixedHeight(400)
+        self.verticalLayout_left.addWidget(self.treeWidget)
         self.verticalLayout_left.addWidget(QtWidgets.QLabel())
 
         self.submit_button = QtWidgets.QPushButton("开始压测")

@@ -10,6 +10,7 @@ import config_path
 import configfile
 from pubilc import public_
 from request_thread import *
+from interface_config import HttpInterfaceConfig
 
 conf_path = config_path.UIConfigPath()
 pul = public_()
@@ -141,7 +142,8 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         pass
 
     def init_signal_slot(self):
-        self.list_ota_packages()
+        if self.ui_config.option_exist(self.ui_config.section_ui_to_background, self.ui_config.option_session_id):
+            self.list_ota_packages()
         # self.get_ota_list_button.clicked.connect(self.list_ota_packages)
         self.submit_button.clicked.connect(self.handle_submit)
         # self.stop_process_button.clicked.connect(self.handle_stop)
@@ -159,7 +161,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.query_ota_package()
 
     def delete_ota_package(self, ota_id):
-        url = "http://192.168.0.30:8080/api/v1/ota/packages/delete"
+        url = HttpInterfaceConfig.test_delete_ota_address
         th_info = {}
         th_info["url"] = url
         th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
@@ -185,7 +187,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             QMessageBox.warning(None, "提示", "删除ota包失败：%s" % json_data["error"])
 
     def query_ota_package(self):
-        url = "http://192.168.0.30:8080/api/v1/ota/packages"
+        url = HttpInterfaceConfig.test_get_ota_list_address
         th_info = {}
         th_info["url"] = url
         th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
@@ -231,7 +233,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
 
     def start_next_get_ota_list(self):
         thr_info = {}
-        url = "http://192.168.0.30:8080/api/v1/ota/packages"
+        url = HttpInterfaceConfig.test_get_ota_list_address
         thr_info["url"] = url
         param = {}
         param["page"] = self.ota_list_flag
@@ -279,7 +281,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         shutil.copy(file_name, file_new_path)
         # 最多按照10M进行分块上传
         ota_info = {}
-        url = "http://192.168.0.30:8080/api/v1/upload/ota"
+        url = HttpInterfaceConfig.test_upload_ota_address
         # url, file_path, split_file_dir, session_id
         ota_info["url"] = url
         ota_info["file_path"] = file_new_path
@@ -293,7 +295,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.start_next_upload()
 
     def start_next_upload(self):
-        url = "http://192.168.0.30:8080/api/v1/upload/ota"
+        url = HttpInterfaceConfig.test_upload_ota_address
         if self.current_upload_index < len(self.json_data_list):
             thread_info = {}
             thread_info["data"] = self.json_data_list[self.current_upload_index]
@@ -319,7 +321,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             return
 
     def parsing_ota_package(self, json_data):
-        url = "http://192.168.0.30:8080/api/v1/ota/packages/upload"
+        url = HttpInterfaceConfig.test_parse_ota_address
         th_info = {}
         data = {}
         department_id = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background, self.ui_config.option_department_id))
@@ -340,7 +342,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             QMessageBox.warning(None, "提示", json_data["error"])
 
     def update_ota_package(self, json_data):
-        url = "http://192.168.0.30:8080/api/v1/ota/packages/create"
+        url = HttpInterfaceConfig.test_update_ota_address
         th_info = {}
         data = {}
         department_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,

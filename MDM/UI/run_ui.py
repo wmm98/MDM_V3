@@ -13,6 +13,7 @@ import os
 import requests
 import configfile
 import config_path
+from interface_config import HttpInterfaceConfig
 from ota_ui import OTA_UI
 
 conf_path = config_path.UIConfigPath()
@@ -44,14 +45,14 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.bg_config = configfile.ConfigP(self.background_config_file_path)
         self.ui_config = configfile.ConfigP(self.ui_config_file_path)
 
+        self.ota_ui = OTA_UI()
+
         self.setupUi(self)
         self.AllTestCase = None
         self.inti_ui()
         self.init_signal_slot()
         self.cases_selected_sum = 0
         self.uuid = None
-
-        self.ota_ui = OTA_UI()
 
     def inti_ui(self):
         # 初始化ini文件
@@ -101,7 +102,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             self.get_waring("验证码不能为空!!!")
             return
         # 登录
-        url = "http://192.168.0.30:8888/api/v1/login"
+        url = HttpInterfaceConfig.test_login_address
         json_data = {"username": username, "password": password, "uuid": self.uuid, "captcha": captcha}
         response = requests.post(url=url, json=json_data).json()
         if response["code"] == 100000:
@@ -326,7 +327,6 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             "children": [],
             "duration": tree_item.text(1)
         }
-        # 我添加的
         for i in range(tree_item.childCount()):
             child_item = tree_item.child(i)
             result["children"].append(self.get_tree_item_status(child_item))
@@ -335,7 +335,11 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
     def on_item_clicked(self, item):
         # 查看ini文件中登录的个人信息是否存在
 
-        if self.ui_config.get_option_value()
+        if not self.ui_config.option_exist(self.ui_config.section_ui_to_background, self.ui_config.option_session_id):
+            # 如果没有登录，清除已选的用例
+            item.setCheckState(0, Qt.Unchecked)
+            QMessageBox.warning(self, "警告", "请先登录")
+            return
 
         if item == self.item_S_T_STA_child_ota_test:
             if item.checkState(0) == 2:
