@@ -1,6 +1,8 @@
 import subprocess
 import sys
 import base64
+import time
+
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtWidgets import QStyledItemDelegate
@@ -78,7 +80,6 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.select_devices_name()
 
     def init_signal_slot(self):
-
         self.treeWidget.expandAll()
         self.treeWidget.itemChanged.connect(self.handlechanged)
         # 用例树点击事件
@@ -87,6 +88,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.captcha_button.clicked.connect(self.display_captcha)
         self.login_button.clicked.connect(self.login)
         self.bind_device_button.clicked.connect(self.bind_device)
+        self.switch_server_button.clicked.connect(self.switch_sever)
 
         self.test_version.clicked.connect(self.display_captcha)
         self.release_version.clicked.connect(self.display_captcha)
@@ -94,9 +96,45 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.edit_device_name.currentIndexChanged.connect(self.get_device_sn)
 
-
         self.qt_process.readyReadStandardOutput.connect(self.handle_stdout)
         self.qt_process.readyReadStandardError.connect(self.handle_stderr)
+
+    def switch_sever(self):
+        if self.test_version.isChecked():
+            url = HttpInterfaceConfig.test_switch_server_address
+        else:
+            url = HttpInterfaceConfig.release_switch_server_address
+        th_info = {}
+        th_info["url"] = url
+        th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                self.ui_config.option_session_id)
+        json = {}
+        json["sns"] = [self.device_sn]
+        json["resetFactoryType"] = "1"
+        json["desc"] = ""
+        json["departmentId"] = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                   self.ui_config.option_department_id))
+        if self.test_version.isChecked():
+            json["url"] = HttpInterfaceConfig.release_server_address
+        else:
+            json["url"] = HttpInterfaceConfig.test_server_address
+        th_info["json"] = json
+        print(th_info)
+        self.switch_server_worker = PostRequestWorker(th_info)
+        self.switch_server_worker.progress.connect(self.handle_switch_server)
+        self.switch_server_worker.start()
+
+    def handle_switch_server(self, json_data):
+        if "error" not in json_data:
+            if json_data["code"] == 100000:
+                QtWidgets.QMessageBox.information(None, "提示", "切换服务器成功")
+                return
+            else:
+                QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                return
+        else:
+            QtWidgets.QMessageBox.warning(None, "提示", "切换服务器失败：%s" % json_data["error"])
+            return
 
     def get_device_sn(self):
         # 获取设备sn
@@ -104,6 +142,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.device_sn = pul.remove_special_char(pul.get_device_serial(device_name))
 
     def get_device_status(self):
+        self.device_status_label.setText("正在获取设备状态...")
         self.device_list_flag = 1
         self.start_next_get_devices_list()
 
@@ -132,29 +171,24 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.devices_worker.start()
 
     def handle_devices_list_response(self, json_data):
-        print("***************************")
-        print(json_data)
-        try:
-            if self.device_list_flag < 10:
-                if "error" not in json_data:
-                    if json_data["code"] == 100000:
-                        if json_data["data"]['total'] > 0:
-                            for device_info in json_data["data"]["rows"]:
-                                print(device_info["sn"])
-                                if device_info["sn"] in self.device_sn:
-                                    print("查询到设备信息.")
-                                    self.device_status_label.setText("%s：%s" % (device_info["sn"], device_info["iotStatus"]))
-                                    return
-                            self.device_list_flag += 1
-                            self.start_next_get_devices_list()
-                        else:
-                            self.device_status_label.setText("查询不到设备信息.")
-                            return
+        if self.device_list_flag < 10:
+            if "error" not in json_data:
+                if json_data["code"] == 100000:
+                    if json_data["data"]['total'] > 0:
+                        for device_info in json_data["data"]["rows"]:
+                            print(device_info["sn"])
+                            if device_info["sn"] in self.device_sn:
+                                print("查询到设备信息.")
+                                self.device_status_label.setText("%s：%s" % (device_info["sn"], device_info["iotStatus"]))
+                                return
+                        self.device_list_flag += 1
+                        self.start_next_get_devices_list()
                     else:
-                        QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                        self.device_status_label.setText("查询不到设备信息.")
                         return
-        except Exception as e:
-            print(e)
+                else:
+                    QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                    return
 
     def bind_device(self):
         if self.test_version.isChecked():
@@ -180,10 +214,13 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 QtWidgets.QMessageBox.information(None, "提示", "绑定设备成功")
+                return
             else:
                 QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                return
         else:
             QtWidgets.QMessageBox.warning(None, "提示", "绑定失败：%s" % json_data["error"])
+            return
 
     def login(self):
         # 登录
@@ -215,10 +252,8 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             self.login_tips.setText("登录成功！")
             self.login_tips.setStyleSheet("color:red")
             self.get_information("登录成功!")
-
             # 记录下sn信息
             self.get_device_sn()
-
             return
         elif response["code"] == 21002:
             self.login_tips.setVisible(True)
