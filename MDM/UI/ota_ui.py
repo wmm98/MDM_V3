@@ -83,7 +83,6 @@ class OTA_MainWindow(config_path.UIConfigPath):
         self.install_way_group.addButton(self.install_not_silent)
         self.install_way_group.addButton(self.install_part_silent)
 
-
         # 设置压测次数
         layout_test_time_info = QHBoxLayout()
         self.test_times_label = QLabel("压测次数")

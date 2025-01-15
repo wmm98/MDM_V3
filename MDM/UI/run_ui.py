@@ -15,8 +15,11 @@ import configfile
 import config_path
 from interface_config import HttpInterfaceConfig
 from ota_ui import OTA_UI
+from pubilc import public_
+from request_thread import *
 
 conf_path = config_path.UIConfigPath()
+pul = public_()
 
 
 class ComboBoxDelegate(QStyledItemDelegate):
@@ -49,6 +52,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.setupUi(self)
         self.AllTestCase = None
+        self.device_sn = None
         self.inti_ui()
         self.init_signal_slot()
         self.cases_selected_sum = 0
@@ -58,7 +62,6 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         # 初始化ini文件
         self.ui_config.init_config_file()
         self.ui_config.add_config_section(self.ui_config.section_ui_to_background)
-
         # 初始化
         # 初始化图片cursor
         # self.cursor = QTextCursor(self.document)
@@ -83,9 +86,104 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.captcha_button.clicked.connect(self.display_captcha)
         self.login_button.clicked.connect(self.login)
+        self.bind_device_button.clicked.connect(self.bind_device)
+
+        self.test_version.clicked.connect(self.display_captcha)
+        self.release_version.clicked.connect(self.display_captcha)
+        self.display_device_info_button.clicked.connect(self.get_device_status)
+
+        self.edit_device_name.currentIndexChanged.connect(self.get_device_sn)
+
 
         self.qt_process.readyReadStandardOutput.connect(self.handle_stdout)
         self.qt_process.readyReadStandardError.connect(self.handle_stderr)
+
+    def get_device_sn(self):
+        # 获取设备sn
+        device_name = self.edit_device_name.currentText()
+        self.device_sn = pul.remove_special_char(pul.get_device_serial(device_name))
+
+    def get_device_status(self):
+        self.device_list_flag = 1
+        self.start_next_get_devices_list()
+
+    def start_next_get_devices_list(self):
+        thr_info = {}
+        if self.test_version.isChecked():
+            url = HttpInterfaceConfig.test_get_devices_address
+        else:
+            url = HttpInterfaceConfig.release_get_devices_address
+        thr_info["url"] = url
+        param = {}
+        param["page"] = self.device_list_flag
+        param["pageSize"] = 10
+        departmentID = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                           self.ui_config.option_department_id))
+        param["departmentId"] = departmentID
+        param["order"] = "id"
+        param["sort"] = "desc"
+        thr_info["params"] = param
+
+        session_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                     self.ui_config.option_session_id)
+        thr_info["session_id"] = session_id
+        self.devices_worker = GetRequestWorker(thr_info)
+        self.devices_worker.progress.connect(self.handle_devices_list_response)
+        self.devices_worker.start()
+
+    def handle_devices_list_response(self, json_data):
+        print("***************************")
+        print(json_data)
+        try:
+            if self.device_list_flag < 10:
+                if "error" not in json_data:
+                    if json_data["code"] == 100000:
+                        if json_data["data"]['total'] > 0:
+                            for device_info in json_data["data"]["rows"]:
+                                print(device_info["sn"])
+                                if device_info["sn"] in self.device_sn:
+                                    print("查询到设备信息.")
+                                    self.device_status_label.setText("%s：%s" % (device_info["sn"], device_info["iotStatus"]))
+                                    return
+                            self.device_list_flag += 1
+                            self.start_next_get_devices_list()
+                        else:
+                            self.device_status_label.setText("查询不到设备信息.")
+                            return
+                    else:
+                        QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                        return
+        except Exception as e:
+            print(e)
+
+    def bind_device(self):
+        if self.test_version.isChecked():
+            url = HttpInterfaceConfig.test_bind_devices_address
+        else:
+            url = HttpInterfaceConfig.release_bind_devices_address
+
+        th_info = {}
+        th_info["url"] = url
+        th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                self.ui_config.option_session_id)
+        json = {}
+        json["sn"] = self.device_sn
+        json["deviceType"] = 1
+        json["departmentId"] = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                    self.ui_config.option_department_id))
+        th_info["json"] = json
+        self.bind_worker = PostRequestWorker(th_info)
+        self.bind_worker.progress.connect(self.handle_bind_device)
+        self.bind_worker.start()
+
+    def handle_bind_device(self, json_data):
+        if "error" not in json_data:
+            if json_data["code"] == 100000:
+                QtWidgets.QMessageBox.information(None, "提示", "绑定设备成功")
+            else:
+                QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+        else:
+            QtWidgets.QMessageBox.warning(None, "提示", "绑定失败：%s" % json_data["error"])
 
     def login(self):
         # 登录
@@ -102,11 +200,13 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             self.get_waring("验证码不能为空!!!")
             return
         # 登录
-        url = HttpInterfaceConfig.test_login_address
+        if self.test_version.isChecked():
+            url = HttpInterfaceConfig.test_login_address
+        else:
+            url = HttpInterfaceConfig.release_login_address
         json_data = {"username": username, "password": password, "uuid": self.uuid, "captcha": captcha}
         response = requests.post(url=url, json=json_data).json()
         if response["code"] == 100000:
-            print(response["data"])
             session_id = response["data"]["session_id"]
             department_id = str(response["data"]["user"]["departmentId"])
             self.ui_config.add_config_option(self.ui_config.section_ui_to_background, self.ui_config.option_session_id, session_id)
@@ -115,6 +215,10 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             self.login_tips.setText("登录成功！")
             self.login_tips.setStyleSheet("color:red")
             self.get_information("登录成功!")
+
+            # 记录下sn信息
+            self.get_device_sn()
+
             return
         elif response["code"] == 21002:
             self.login_tips.setVisible(True)
@@ -137,22 +241,29 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def get_captcha(self):
         # 获取验证码
-        response = requests.get(url="http://192.168.0.30:8888/api/v1/captcha").json()
+        if self.test_version.isChecked():
+            url = HttpInterfaceConfig.test_get_captcha_address
+        else:
+            url = HttpInterfaceConfig.release_get_captcha_address
+        response = requests.get(url).json()
         uuid = response["data"]["uuid"]
         captcha_base64 = response["data"]["captcha"]
         self.uuid = uuid
         return {"uuid": uuid, "captcha": captcha_base64}
 
     def display_captcha(self):
-        captcha_info = self.get_captcha()
-        self.uuid = captcha_info["uuid"]
-        self.captcha = captcha_info["captcha"]
-        # 转换为图片格式
-        image_data = base64.b64decode(self.captcha)
-        byte_array = QByteArray(image_data)
-        pixmap = QPixmap()
-        pixmap.loadFromData(byte_array)
-        self.captcha_button.setPixmap(pixmap)
+        try:
+            captcha_info = self.get_captcha()
+            self.uuid = captcha_info["uuid"]
+            self.captcha = captcha_info["captcha"]
+            # 转换为图片格式
+            image_data = base64.b64decode(self.captcha)
+            byte_array = QByteArray(image_data)
+            pixmap = QPixmap()
+            pixmap.loadFromData(byte_array)
+            self.captcha_button.setPixmap(pixmap)
+        except Exception as e:
+            print(e)
 
     def get_information(self, info):
         QMessageBox.information(self, "提示", info)

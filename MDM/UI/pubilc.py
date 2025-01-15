@@ -3,6 +3,9 @@ import requests
 from datetime import datetime
 import hashlib
 from PyQt5 import QtWidgets, QtCore
+from process_shell import Shell
+
+shell = Shell()
 
 
 class PostRequestWorker(QtCore.QThread):
@@ -21,6 +24,14 @@ class PostRequestWorker(QtCore.QThread):
 class public_:
     def __init__(self):
         pass
+
+    def send_adb_shell_command(self, device_name, cmd):
+        cmd = "adb -s %s shell %s" % (device_name, cmd)
+        return shell.invoke(cmd)
+
+    def get_device_serial(self, device_name):
+        cmd = "getprop ro.serialno"
+        return self.send_adb_shell_command(device_name, cmd)
 
     def upload_lot(self, info):
         """
@@ -124,6 +135,9 @@ class public_:
         headers = {'Sessionid': session_id}
         response = requests.delete(url, json=json, headers=headers, **kwargs)
         return response
+
+    def remove_special_char(self, string):
+        return string.replace(" ", "").replace("\n", "").replace("\r", "").replace("\t", "")
 
 
 if __name__ == '__main__':
