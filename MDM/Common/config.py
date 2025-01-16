@@ -8,12 +8,6 @@ class Config:
     environment_properties_path = os.path.join(project_path, "Report", "environment.properties")
     debug_log_path = os.path.join(project_path, "Log", "Debug", "log.log")
 
-
-
-
-
-
-
     # ini◊÷∂Œ Ù–‘
 
     section_ui_to_background = "UI-Background"

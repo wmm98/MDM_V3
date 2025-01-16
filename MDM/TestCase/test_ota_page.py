@@ -1,6 +1,5 @@
 import allure
-
-from WebPage import ota_page
+from MDM.WebPage import ota_page
 
 ota_pa = ota_page.OTAPage()
 
@@ -16,4 +15,5 @@ class TestOTA:
     @allure.feature("stability_normal_release_ota")
     @allure.title("压测ota正常发布")
     def test_normal_release_ota_package(self):
-        pass
+        print("***************ota压测开始***************")
+        print("***************ota压测结束***************")

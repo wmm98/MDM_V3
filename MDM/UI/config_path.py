@@ -8,7 +8,7 @@ class UIConfigPath:
     background_config_file_path = os.path.join(project_path, "UI", "background_config.ini")
     ui_config_file_path = os.path.join(project_path, "UI", "ui_config.ini")
     debug_log_path = os.path.join(project_path, "Log", "Debug", "log.log")
-    run_bat_path = os.path.join(project_path, "main.bat")
+    main_bat_path = os.path.join(project_path, "main.bat")
 
     # 验证码路径
     captcha_path = os.path.join(project_path, "UI", "captcha.png")

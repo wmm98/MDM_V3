@@ -240,6 +240,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
     def list_ota_packages(self):
         self.ota_list_flag = 1
         self.ota_packages_list = []
+        self.ota_package_ids_list = []
         self.start_next_get_ota_list()
 
     def start_next_get_ota_list(self):
@@ -271,6 +272,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
                         self.ota_list_flag += 1
                         for pack in json_data["data"]["otas"]:
                             self.ota_packages_list.append(pack["name"])
+                            self.ota_package_ids_list.append(pack["id"])
                     else:
                         self.ota_list_box.clear()
                         self.ota_list_box.addItems(self.ota_packages_list)
@@ -298,7 +300,11 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         section = config.section_ota_interface
         config.add_config_section(section)
 
-        config.add_config_option(section, config.option_ota_name, self.ota_list_box.currentText())
+        ota_name = self.ota_list_box.currentText()
+        config.add_config_option(section, config.option_ota_name, ota_name)
+        ota_id = self.ota_package_ids_list[self.ota_packages_list.index(ota_name)]
+        config.add_config_option(section, config.option_ota_id, str(ota_id))
+
         if self.install_not_silent.isChecked():
             config.add_config_option(section, config.option_ota_is_not_silent, "1")
         else:

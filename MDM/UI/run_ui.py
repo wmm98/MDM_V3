@@ -72,8 +72,6 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         # 初始化进程
         self.qt_process = QProcess()
         self.submit_button.clicked.connect(self.handle_submit)
-        # 初始化图片cursor
-        # self.cursor = QTextCursor(self.document)
 
         # 展示用例树
         self.list_tree_cases()
@@ -85,7 +83,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.treeWidget.itemChanged.connect(self.handlechanged)
         # 用例树点击事件
         self.treeWidget.itemClicked.connect(self.on_item_clicked)
-
+        self.qt_process.finished.connect(self.handle_finished)
         self.captcha_button.clicked.connect(self.display_captcha)
         self.login_button.clicked.connect(self.login)
         self.bind_device_button.clicked.connect(self.bind_device)
@@ -98,8 +96,16 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.edit_device_name.currentIndexChanged.connect(self.get_device_sn)
         self.reboot_device_button.clicked.connect(self.handle_reboot)
 
-        self.qt_process.readyReadStandardOutput.connect(self.handle_stdout)
-        self.qt_process.readyReadStandardError.connect(self.handle_stderr)
+        self.ota_ui.submit_button.clicked.connect(self.display_ota_stability_test_times)
+
+    def display_ota_stability_test_times(self):
+        time.sleep(1)
+        if self.ota_ui.submit_flag:
+            if self.item_S_T_STA_child_ota_test.checkState(0) == 2:
+                times = self.ui_config.get_option_value(self.ui_config.section_ota_interface,
+                                                        self.ui_config.test_times)
+                self.item_S_T_STA_child_ota_test.setText(1, times)
+                self.item_S_T_STA_child_ota_test.setTextAlignment(1, Qt.AlignRight)
 
     def check_device_online(self):
         self.online_timer = QTimer(self)
@@ -137,7 +143,6 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             json["url"] = HttpInterfaceConfig.test_server_address
         th_info["json"] = json
-        print(th_info)
         self.switch_server_worker = PostRequestWorker(th_info)
         self.switch_server_worker.progress.connect(self.handle_switch_server)
         self.switch_server_worker.start()
@@ -305,18 +310,15 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         return {"uuid": uuid, "captcha": captcha_base64}
 
     def display_captcha(self):
-        try:
-            captcha_info = self.get_captcha()
-            self.uuid = captcha_info["uuid"]
-            self.captcha = captcha_info["captcha"]
-            # 转换为图片格式
-            image_data = base64.b64decode(self.captcha)
-            byte_array = QByteArray(image_data)
-            pixmap = QPixmap()
-            pixmap.loadFromData(byte_array)
-            self.captcha_button.setPixmap(pixmap)
-        except Exception as e:
-            print(e)
+        captcha_info = self.get_captcha()
+        self.uuid = captcha_info["uuid"]
+        self.captcha = captcha_info["captcha"]
+        # 转换为图片格式
+        image_data = base64.b64decode(self.captcha)
+        byte_array = QByteArray(image_data)
+        pixmap = QPixmap()
+        pixmap.loadFromData(byte_array)
+        self.captcha_button.setPixmap(pixmap)
 
     def get_information(self, info):
         QMessageBox.information(self, "提示", info)
@@ -373,7 +375,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         # 相应用例转为英文标识
         self.transfer_cases = []
         for case in self.cases:
-            if "ota推送--正常压测" in case:
+            if "OTA推送压测" in case:
                 self.transfer_cases.append("stability_normal_release_ota")
 
         self.ui_config.add_config_option(self.ui_config.section_ui_to_background,
@@ -383,55 +385,16 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.ui_config.add_config_option(self.ui_config.section_ui_to_background,
                                          self.ui_config.ui_option_cases, ",".join(self.transfer_cases))
 
+        self.start_qprocess(conf_path.main_bat_path)
 
-        # try:
-        project_path = os.path.dirname(os.path.abspath(__file__))
-
-        base_path = getattr(sys, '_MEIPASS', os.path.abspath(""))
-        # script_path = os.path.join(base_path, "main.py")
-
-        if getattr(sys, 'frozen', False):
-            # 打包后的 .exe
-            meipass_path = getattr(sys, '_MEIPASS', os.path.abspath(""))
-            python_path = os.path.join(meipass_path, "python.exe")
-            main_py_path = os.path.join(meipass_path, "main.py")
-            print("打包后的 .exe")
-        else:
-            # 开发环境
-            python_path = sys.executable
-            main_py_path = os.path.join(os.path.dirname(__file__), "main.py")
-            print(main_py_path)
-
-        self.start_qprocess(python_path, main_py_path)
-            #
-            # # 连接输出和错误信号以捕获输出日志
-            # self.qt_process.readyReadStandardOutput.connect(self.handle_stdout)
-            # self.qt_process.readyReadStandardError.connect(self.handle_stderr)
-
-            # self.stop_process_button.setEnabled(True)
-            # self.submit_button.setDisabled(True)
-            # self.submit_button.setText("测试中...")
-        # except Exception as e:
-            # print(e)
-
-    def start_subprocess(self):
-        if getattr(sys, 'frozen', False):
-            # 打包后的 .exe
-            meipass_path = getattr(sys, '_MEIPASS', os.path.abspath(""))
-            python_path = os.path.join(meipass_path, "python.exe")
-            main_py_path = os.path.join(meipass_path, "main.py")
-        else:
-            # 开发环境
-            python_path = sys.executable
-            main_py_path = os.path.join(os.path.dirname(__file__), "main.py")
-
-        # 启动新进程
-        subprocess.Popen([python_path, main_py_path])
+        self.stop_process_button.setEnabled(True)
+        self.submit_button.setDisabled(True)
+        self.submit_button.setText("测试中...")
 
     # 或者使用 QProcess
-    def start_qprocess(self, python_path, main_py_path):
+    def start_qprocess(self, file_path):
         # 启动新进程
-        self.qt_process.start(python_path, [main_py_path])
+        self.qt_process.start(file_path)
 
     def stop_process(self):
         # 文件位置初始化
@@ -466,6 +429,19 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         # 停止 QProcess 进程
         self.qt_process.startDetached("taskkill /PID %s /F /T" % str(self.qt_process.processId()))
         event.accept()
+
+    def update_debug_log(self):
+        try:
+            log_file = self.debug_log_path
+            if os.path.exists(log_file):
+                with open(log_file, 'r', encoding='utf-8') as file:
+                    file.seek(self.last_position)
+                    new_content = file.read()
+                    if new_content:
+                        self.text_edit.insertPlainText(new_content + "\n")
+                        self.last_position = file.tell()
+        except Exception as e:
+            self.log_edit.insertPlainText(str(e) + "\n")
 
     def handlechanged(self, item, column):
         # 获取选中节点的子节点个数
