@@ -46,6 +46,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def __init__(self):
         super(UIDisplay, self).__init__()
+        self.last_position = 0
 
         self.bg_config = configfile.ConfigP(self.background_config_file_path)
         self.ui_config = configfile.ConfigP(self.ui_config_file_path)
@@ -95,6 +96,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.edit_device_name.currentIndexChanged.connect(self.get_device_sn)
         self.reboot_device_button.clicked.connect(self.handle_reboot)
+        self.submit_button.clicked.connect(self.handle_submit)
 
         self.ota_ui.submit_button.clicked.connect(self.display_ota_stability_test_times)
 
@@ -387,6 +389,14 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.start_qprocess(conf_path.main_bat_path)
 
+        # 设置定时器检测间隔
+        self.check_interval = 1000  # 定时器间隔，单位毫秒
+        # 调试日志定时器
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_debug_log)
+        self.timer.start(self.check_interval)  # 启动定时器
+        # 展示图片的两个定定时器
+
         self.stop_process_button.setEnabled(True)
         self.submit_button.setDisabled(True)
         self.submit_button.setText("测试中...")
@@ -402,6 +412,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.stop_process_button.setDisabled(True)
         self.submit_button.setEnabled(True)
         self.submit_button.setText("开始测试")
+        self.timer.stop()
 
     def start_qt_process(self, file_path):
         # 启动 外部 脚本
@@ -428,6 +439,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         # 在窗口关闭时停止定时器,关闭任务运行
         # 停止 QProcess 进程
         self.qt_process.startDetached("taskkill /PID %s /F /T" % str(self.qt_process.processId()))
+        self.timer.stop()
         event.accept()
 
     def update_debug_log(self):

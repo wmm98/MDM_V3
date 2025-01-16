@@ -1,5 +1,5 @@
 import allure
-from MDM.WebPage import ota_page
+from WebPage import ota_page
 
 ota_pa = ota_page.OTAPage()
 

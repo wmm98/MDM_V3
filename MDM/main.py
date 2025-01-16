@@ -1,6 +1,6 @@
 import shutil
 import datetime
-from MDM.Common import config, process_shell, log
+from Common import config, process_shell, log
 import pytest
 
 if __name__ == '__main__':
