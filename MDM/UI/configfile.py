@@ -18,6 +18,7 @@ class ConfigP(UIConfigPath):
     test_interval = "rounds_interval"
     # 通用模块的关到开的时长
     bt_interval = "bt_interval"
+    test_times = "test_times"
 
     # 接口相关
     section_web_interface = "Web-Interface"

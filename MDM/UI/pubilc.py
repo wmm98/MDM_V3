@@ -25,6 +25,19 @@ class public_:
     def __init__(self):
         pass
 
+    def restart_adb(self):
+        shell.invoke("adb kill-server")
+        shell.invoke("adb start-server")
+
+    def get_devices_list(self):
+        devices_info = shell.invoke("adb devices").split("\r\n")[1:-2]
+        devices = [device_str.split("\t")[0] for device_str in devices_info if device_str.split("\t")[1] == "device"]
+        return devices
+
+    def reboot_device(self, device_name):
+        cmd = "reboot"
+        return self.send_adb_shell_command(device_name, cmd)
+
     def send_adb_shell_command(self, device_name, cmd):
         cmd = "adb -s %s shell %s" % (device_name, cmd)
         return shell.invoke(cmd)

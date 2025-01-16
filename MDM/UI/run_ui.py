@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QStyledItemDelegate
 from PyQt5.QtCore import QProcess, Qt, pyqtSlot
 from PyQt5.QtGui import QTextDocument, QTextCursor, QTextImageFormat
 from init_ui import Ui_MainWindow
-from PyQt5.QtCore import QByteArray
+from PyQt5.QtCore import QByteArray, QTimer
 from PyQt5.QtGui import QPixmap
 import os
 import requests
@@ -78,6 +78,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         # 展示用例树
         self.list_tree_cases()
         self.select_devices_name()
+        self.check_device_online()
 
     def init_signal_slot(self):
         self.treeWidget.expandAll()
@@ -95,9 +96,26 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.display_device_info_button.clicked.connect(self.get_device_status)
 
         self.edit_device_name.currentIndexChanged.connect(self.get_device_sn)
+        self.reboot_device_button.clicked.connect(self.handle_reboot)
 
         self.qt_process.readyReadStandardOutput.connect(self.handle_stdout)
         self.qt_process.readyReadStandardError.connect(self.handle_stderr)
+
+    def check_device_online(self):
+        self.online_timer = QTimer(self)
+        self.online_timer.timeout.connect(self.update_devices_box)
+        self.online_timer.start(5000)
+
+    def update_devices_box(self):
+        devices_list = pul.get_devices_list()
+        self.edit_device_name.clear()
+        self.edit_device_name.addItems(devices_list)
+
+    def handle_reboot(self):
+        device_name = self.edit_device_name.currentText()
+        if device_name:
+            pul.reboot_device(device_name)
+            # pul.restart_adb()
 
     def switch_sever(self):
         if self.test_version.isChecked():

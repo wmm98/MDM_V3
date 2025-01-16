@@ -1,5 +1,4 @@
 import os
-
 import requests
 from Demos.win32ts_logoff_disconnected import session
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -11,6 +10,7 @@ import configfile
 from pubilc import public_
 from request_thread import *
 from interface_config import HttpInterfaceConfig
+from configfile import ConfigP
 
 conf_path = config_path.UIConfigPath()
 pul = public_()
@@ -52,15 +52,15 @@ class OTA_MainWindow(config_path.UIConfigPath):
         self.verticalLayout_left.addWidget(QLabel())
 
         # 显示接口中的前10页的ota包，在可选框中显示这些包
-        self.verticalLayout_left.addWidget(QLabel("已上传的OTA列表："))
+        self.verticalLayout_left.addWidget(QLabel("已上传的OTA列表，请选择需要测试的OTA包："))
         layout_ota_info = QHBoxLayout()
         self.ota_list_box = QComboBox()
         self.ota_list_box.setFixedWidth(central_length // 2 + 100)
-        # self.get_ota_list_button = QtWidgets.QPushButton("获取ota列表")
+        self.get_ota_list_button = QtWidgets.QPushButton("获取ota列表")
         self.delete_ota_button = QtWidgets.QPushButton("删除ota")
         # self.delete_all = QtWidgets.QPushButton("删除全部")
         layout_ota_info.addWidget(self.ota_list_box)
-        # layout_ota_info.addWidget(self.get_ota_list_button)
+        layout_ota_info.addWidget(self.get_ota_list_button)
         layout_ota_info.addWidget(self.delete_ota_button)
         # layout_ota_info.addWidget(self.delete_all)
         layout_ota_info.addStretch(1)
@@ -72,7 +72,7 @@ class OTA_MainWindow(config_path.UIConfigPath):
         layout_install_way = QHBoxLayout()
         self.install_way_group = QButtonGroup()
         # self.install_way_group.setExclusive(True)
-        self.install_not_silent = QCheckBox("静默安装")
+        self.install_not_silent = QCheckBox("非静默安装")
         self.install_part_silent = QCheckBox("半静默安装")
         layout_install_way.addWidget(self.install_not_silent)
         layout_install_way.addWidget(self.install_part_silent)
@@ -134,16 +134,18 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         super(OTA_UI, self).__init__()
         self.ui_config = configfile.ConfigP(self.ui_config_file_path)
         self.setupUi(self)
+        self.clear_package_path()
         self.init_ui()
         self.init_signal_slot()
+        self.submit_flag = False
 
     def init_ui(self):
-        pass
-
-    def init_signal_slot(self):
         if self.ui_config.option_exist(self.ui_config.section_ui_to_background, self.ui_config.option_session_id):
             self.list_ota_packages()
-        # self.get_ota_list_button.clicked.connect(self.list_ota_packages)
+        self.list_test_times()
+
+    def init_signal_slot(self):
+        self.get_ota_list_button.clicked.connect(self.list_ota_packages)
         self.submit_button.clicked.connect(self.handle_submit)
         # self.stop_process_button.clicked.connect(self.handle_stop)
         # self.login_button.clicked.connect(self.handle_login)
@@ -151,6 +153,15 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.select_button.clicked.connect(self.handle_select)
         self.upload_button.clicked.connect(self.handle_upload)
         self.delete_ota_button.clicked.connect(self.handle_delete_ota)
+
+    def clear_package_path(self):
+        original_path = conf_path.ota_origin_path
+        split_path = conf_path.ota_split_path
+        # 删除文件夹下面的所有文件
+        for file in os.listdir(original_path):
+            os.remove(os.path.join(original_path, file))
+        for file in os.listdir(split_path):
+            os.remove(os.path.join(split_path, file))
 
     def handle_delete_ota(self):
         self.ota_id_flag = 0
@@ -182,8 +193,10 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
                 return
             else:
                 QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                return
         else:
             QMessageBox.warning(None, "提示", "删除ota包失败：%s" % json_data["error"])
+            return
 
     def query_ota_package(self):
         url = HttpInterfaceConfig.test_get_ota_list_address
@@ -216,14 +229,13 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
                                 self.delete_ota_package(ota_id)
                 else:
                     QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                    return
             else:
                 QtWidgets.QMessageBox.warning(None, "提示", "查询ota包失败：%s" % json_data["error"])
+                return
         else:
             QtWidgets.QMessageBox.warning(None, "提示", "查询ota包失败：%s" % json_data["error"])
-
-    def list_test_times(self):
-        test_times = [str(i * 5) for i in range(1, 500)]
-        self.test_times.addItems(test_times)
+            return
 
     def list_ota_packages(self):
         self.ota_list_flag = 1
@@ -251,6 +263,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.otas_worker.start()
 
     def handle_ota_list_response(self, json_data):
+        print(json_data)
         if self.ota_list_flag < 10:
             if "error" not in json_data:
                 if json_data["code"] == 100000:
@@ -266,7 +279,41 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
                     self.start_next_get_ota_list()
 
     def handle_submit(self):
-        pass
+        if not self.ota_list_box.currentText():
+            QtWidgets.QMessageBox.warning(None, "提示", "请上传并且选择OTA包")
+            return
+        if not self.install_way_group.checkedButton():
+            QtWidgets.QMessageBox.warning(None, "提示", "请选择OTA升级方式")
+            return
+        if not self.test_times.currentText():
+            QtWidgets.QMessageBox.warning(None, "提示", "请选择测试次数")
+            return
+        # 保存配置
+        self.save_config()
+        self.submit_flag = True
+        QtWidgets.QMessageBox.information(None, "提示", "OTA包压测例配置保存成功")
+
+    def save_config(self):
+        config = ConfigP(self.ui_config_file_path)
+        section = config.section_ota_interface
+        config.add_config_section(section)
+
+        config.add_config_option(section, config.option_ota_name, self.ota_list_box.currentText())
+        if self.install_not_silent.isChecked():
+            config.add_config_option(section, config.option_ota_is_not_silent, "1")
+        else:
+            config.add_config_option(section, config.option_ota_is_not_silent, "0")
+        if self.install_part_silent.isChecked():
+            config.add_config_option(section, config.option_ota_is_part_silent, "1")
+        else:
+            config.add_config_option(section, config.option_ota_is_part_silent, "0")
+
+        config.add_config_option(section, config.test_times, self.test_times.currentText())
+
+        if self.is_probability_test.isChecked():
+            config.add_config_option(section, config.is_probability_test, "1")
+        else:
+            config.add_config_option(section, config.is_probability_test, "0")
 
     def handle_stop(self):
         pass
@@ -310,9 +357,11 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 self.upload_flag += 1
-            self.current_upload_index += 1
-            self.start_next_upload()
-
+                self.current_upload_index += 1
+                self.start_next_upload()
+            else:
+                QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                return
             if self.current_upload_index == len(self.json_data_list):
                 self.parsing_ota_package(json_data)
         else:
@@ -337,8 +386,12 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 self.update_ota_package(json_data)
+            else:
+                QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                return
         else:
             QMessageBox.warning(None, "提示", json_data["error"])
+            return
 
     def update_ota_package(self, json_data):
         url = HttpInterfaceConfig.test_update_ota_address
@@ -376,13 +429,19 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
                 return
             else:
                 QMessageBox.warning(None, "提示", "%s" % json_data["message"])
+                return
         else:
             QMessageBox.warning(None, "提示", "ota上传失败：%s" % json_data["error"])
+            return
 
     def handle_select(self):
         file_name, _ = QtWidgets.QFileDialog.getOpenFileName(None, "选择OTA文件", "", "Zip Files (*.zip)",
                                                              options=self.options)
         self.ota_edit.setText(file_name)
+
+    def list_test_times(self):
+        test_times = [str(i * 3) for i in range(1, 500)]
+        self.test_times.addItems(test_times)
 
 
 if __name__ == '__main__':
