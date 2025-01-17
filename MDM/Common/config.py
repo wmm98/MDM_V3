@@ -7,25 +7,28 @@ class Config:
     html_report_path = os.path.join(project_path, "Report", "html")
     environment_properties_path = os.path.join(project_path, "Report", "environment.properties")
     debug_log_path = os.path.join(project_path, "Log", "Debug", "log.log")
-
-    # ini×Ö¶ÎÊôĞÔ
+    # ä¸¤ä¸ªiniæ–‡ä»¶è·¯å¾„
+    bg_config_ini_path = os.path.join(project_path, "UI", "background_config.ini")
+    ui_config_ini_path = os.path.join(project_path, "UI", "ui_config.ini")
 
     section_ui_to_background = "UI-Background"
     section_background_to_ui = "Background-UI"
 
-    # ¹«¹²
+    # å…¬å…±
     ui_option_device_name = "device_name"
     bg_option_devices_name = "devices_name"
     bg_option_COM_ports = "COM_ports"
+    bg_option_device_sn = "device_sn"
     ui_option_cases = "cases"
-    # ÊÇ·ñ½øĞĞÊ§°Ü¸ÅÂÊĞÔÍ³¼Æ²âÊÔ
+    # æ˜¯å¦è¿›è¡Œå¤±è´¥æ¦‚ç‡æ€§ç»Ÿè®¡æµ‹è¯•
     is_probability_test = "is_probability_test"
-    # Ã¿Ò»ÂÖ¼ä¸ôÊ±³¤
+    # æ¯ä¸€è½®é—´éš”æ—¶é•¿
     test_interval = "rounds_interval"
-    # Í¨ÓÃÄ£¿éµÄ¹Øµ½¿ªµÄÊ±³¤
+    # é€šç”¨æ¨¡å—çš„å…³åˆ°å¼€çš„æ—¶é•¿
     bt_interval = "bt_interval"
+    test_times = "test_times"
 
-    # ½Ó¿ÚÏà¹Ø
+    # æ¥å£ç›¸å…³
     section_web_interface = "Web-Interface"
     option_session_id = "session_id"
     option_department_id = "department_id"
@@ -35,3 +38,15 @@ class Config:
     option_ota_id = "ota_id"
     option_ota_is_part_silent = "ota_part_silent"
     option_ota_is_not_silent = "ota_not_silent"
+
+
+class MDM3Interface:
+    test_base_url = "http://192.168.0.30:8080/"
+    release_base_url = "https://mdm3.telpopaas.com/"
+
+    ota_release_url = "api/v1/ota/packages/release"
+    ota_release_histories_url = "api/v1/ota/histories"
+    ota_histories_delete_url = "api/v1/ota/histories/delete"
+
+
+

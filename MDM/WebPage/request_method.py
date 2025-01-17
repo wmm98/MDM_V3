@@ -4,36 +4,75 @@ import os
 
 
 class RequestMethod:
-    def __init__(self):
-        pass
+    def __init__(self, max_retries=3, retry_delay=2):
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
 
     def m_get(self, url, session_id=None, params=None, **kwargs):
-        if session_id is None:
-            response = requests.get(url, params=params, **kwargs)
+        for i in range(self.max_retries):
+            if session_id is None:
+                response = requests.get(url, params=params, **kwargs)
+                if response.json()['code'] == 100000:
+                    return response
+            else:
+                headers = {'Sessionid': session_id}
+                response = requests.get(url, params=params, headers=headers, **kwargs)
+                if response.json()['code'] != 100000:
+                    return response
+            time.sleep(self.retry_delay)
             return response
-        else:
-            headers = {'Sessionid': session_id}
-            response = requests.get(url, params=params, headers=headers, **kwargs)
-            return response
+
+        # if session_id is None:
+        #     response = requests.get(url, params=params, **kwargs)
+        #     return response
+        # else:
+        #     headers = {'Sessionid': session_id}
+        #     response = requests.get(url, params=params, headers=headers, **kwargs)
+        #     return response
 
     def m_post(self, url, session_id=None, files=None, data=None, json=None, **kwargs):
-        if session_id is None:
-            response = requests.post(url, data=data, json=json, files=files, **kwargs)
-            return response
-        else:
-            headers = {'Sessionid': session_id}
-            response = requests.post(url, data=data, json=json, files=files, headers=headers, **kwargs)
-            return response
+        for i in range(self.max_retries):
+            if session_id is None:
+                response = requests.post(url, data=data, json=json, files=files, **kwargs)
+                if response.json()['code'] == 100000:
+                    return response
+            else:
+                headers = {'Sessionid': session_id}
+                response = requests.post(url, data=data, json=json, files=files, headers=headers, **kwargs)
+                if response.json()['code'] == 100000:
+                    return response
+            time.sleep(self.retry_delay)
+        return response
+
+        # if session_id is None:
+        #     response = requests.post(url, data=data, json=json, files=files, **kwargs)
+        #     return response
+        # else:
+        #     headers = {'Sessionid': session_id}
+        #     response = requests.post(url, data=data, json=json, files=files, headers=headers, **kwargs)
+        #     return response
 
     def m_delete(self, url, session_id, json=None, **kwargs):
-        headers = {'Sessionid': session_id}
-        response = requests.delete(url, json=json, headers=headers, **kwargs)
+        for i in range(self.max_retries):
+            headers = {'Sessionid': session_id}
+            response = requests.delete(url, json=json, headers=headers, **kwargs)
+            if response.json()['code'] == 100000:
+                return response
+            time.sleep(self.retry_delay)
         return response
 
     def m_put(self, url, session_id, data=None, **kwargs):
-        headers = {'Sessionid': session_id}
-        response = requests.put(url, data=data, headers=headers, **kwargs)
+        for i in range(self.max_retries):
+            headers = {'Sessionid': session_id}
+            response = requests.put(url, data=data, headers=headers, **kwargs)
+            if response.json()['code'] == 100000:
+                return response
+            time.sleep(self.retry_delay)
         return response
+
+        # headers = {'Sessionid': session_id}
+        # response = requests.put(url, data=data, headers=headers, **kwargs)
+        # return response
 
 
 if __name__ == '__main__':

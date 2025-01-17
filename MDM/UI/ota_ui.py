@@ -1,10 +1,12 @@
 import os
 import requests
-from Demos.win32ts_logoff_disconnected import session
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QComboBox, QButtonGroup, QWidget, QSplitter, QTextEdit, QPushButton, QLabel, QMessageBox
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
 import shutil
+
+from huggingface_hub import upload_file
+
 import config_path
 import configfile
 from pubilc import public_
@@ -360,6 +362,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
             self.worker.start()
 
     def upload_response(self, json_data):
+        print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 self.upload_flag += 1
@@ -389,6 +392,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         self.parase_worker.start()
 
     def handle_parsing_response(self, json_data):
+        print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 self.update_ota_package(json_data)

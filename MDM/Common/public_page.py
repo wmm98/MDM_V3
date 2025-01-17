@@ -22,6 +22,8 @@ class PublicPage:
                 file_number += 1
         return file_parts
 
+    def remove_special_char(self, string):
+        return string.replace(" ", "").replace("\n", "").replace("\r", "").replace("\t", "")
 
 if __name__ == '__main__':
     public = PublicPage()
