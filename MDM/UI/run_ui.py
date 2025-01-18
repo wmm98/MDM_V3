@@ -214,6 +214,8 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
                 else:
                     QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
                     return
+            else:
+                QtWidgets.QMessageBox.warning(None, "提示", "查询设备信息失败：%s" % json_data["error"])
 
     def bind_device(self):
         if self.test_version.isChecked():
