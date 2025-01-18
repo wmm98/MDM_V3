@@ -58,6 +58,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.device_sn = None
         self.inti_ui()
         self.init_signal_slot()
+        self.display_captcha()
         self.cases_selected_sum = 0
         self.uuid = None
 
@@ -97,6 +98,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.edit_device_name.currentIndexChanged.connect(self.get_device_sn)
         self.reboot_device_button.clicked.connect(self.handle_reboot)
         self.submit_button.clicked.connect(self.handle_submit)
+        self.stop_process_button.clicked.connect(self.stop_process)
 
         self.ota_ui.submit_button.clicked.connect(self.display_ota_stability_test_times)
 
@@ -269,36 +271,43 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             url = HttpInterfaceConfig.release_login_address
         json_data = {"username": username, "password": password, "uuid": self.uuid, "captcha": captcha}
-        response = requests.post(url=url, json=json_data).json()
-        if response["code"] == 100000:
-            session_id = response["data"]["session_id"]
-            department_id = str(response["data"]["user"]["departmentId"])
-            self.ui_config.add_config_option(self.ui_config.section_ui_to_background, self.ui_config.option_session_id, session_id)
-            self.ui_config.add_config_option(self.ui_config.section_ui_to_background, self.ui_config.option_department_id, department_id)
+        try:
+            response = requests.post(url=url, json=json_data).json()
+            if response["code"] == 100000:
+                session_id = response["data"]["session_id"]
+                department_id = str(response["data"]["user"]["departmentId"])
+                self.ui_config.add_config_option(self.ui_config.section_ui_to_background, self.ui_config.option_session_id, session_id)
+                self.ui_config.add_config_option(self.ui_config.section_ui_to_background, self.ui_config.option_department_id, department_id)
+                self.login_tips.setVisible(True)
+                self.login_tips.setText("登录成功！")
+                self.login_tips.setStyleSheet("color:red")
+                self.get_information("登录成功!")
+                # 记录下sn信息
+                self.get_device_sn()
+                return
+            elif response["code"] == 21002:
+                self.login_tips.setVisible(True)
+                self.login_tips.setText("登录失败，用户名或密码错误，请重新登录!")
+                self.login_tips.setStyleSheet("color:red")
+                self.get_waring("登录失败，用户名或密码错误，请重新登录!")
+                return
+            elif response["code"] == 21001:
+                self.login_tips.setVisible(True)
+                self.login_tips.setText("登录失败，验证码错误，请重新登录!")
+                self.login_tips.setStyleSheet("color:red")
+                self.get_waring("登录失败，验证码错误，请重新登录!")
+                return
+            else:
+                self.login_tips.setVisible(True)
+                self.login_tips.setText("登录失败， 失败码：%s，请重新登录!" % response["code"])
+                self.login_tips.setStyleSheet("color:red")
+                self.get_waring("登录失败，请重新登录!")
+                return
+        except Exception as e:
             self.login_tips.setVisible(True)
-            self.login_tips.setText("登录成功！")
+            self.login_tips.setText("登录失败，，请重新登录!")
             self.login_tips.setStyleSheet("color:red")
-            self.get_information("登录成功!")
-            # 记录下sn信息
-            self.get_device_sn()
-            return
-        elif response["code"] == 21002:
-            self.login_tips.setVisible(True)
-            self.login_tips.setText("登录失败，用户名或密码错误，请重新登录!")
-            self.login_tips.setStyleSheet("color:red")
-            self.get_waring("登录失败，用户名或密码错误，请重新登录!")
-            return
-        elif response["code"] == 21001:
-            self.login_tips.setVisible(True)
-            self.login_tips.setText("登录失败，验证码错误，请重新登录!")
-            self.login_tips.setStyleSheet("color:red")
-            self.get_waring("登录失败，验证码错误，请重新登录!")
-            return
-        else:
-            self.login_tips.setVisible(True)
-            self.login_tips.setText("登录失败， 失败码：%s，请重新登录!" % response["code"])
-            self.login_tips.setStyleSheet("color:red")
-            self.get_waring("登录失败，请重新登录!")
+            self.get_waring(str(e))
             return
 
     def get_captcha(self):
@@ -538,8 +547,8 @@ if __name__ == '__main__':
                      stderr=subprocess.PIPE).communicate(timeout=120)
     app = QtWidgets.QApplication(sys.argv)
     myshow = UIDisplay()
-    myshow.display_captcha()
     myshow.show()
     app.exec_()
+
 
     #

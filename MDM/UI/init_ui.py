@@ -18,7 +18,7 @@ class Ui_MainWindow(config_path.UIConfigPath):
     options |= QtWidgets.QFileDialog.ReadOnly
 
     def __init__(self):
-        self.stop_process_button = QtWidgets.QPushButton("停止压测")
+       pass
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -121,7 +121,7 @@ class Ui_MainWindow(config_path.UIConfigPath):
 
         self.submit_button = QtWidgets.QPushButton("开始压测")
         self.verticalLayout_left.addWidget(self.submit_button)
-
+        self.stop_process_button = QtWidgets.QPushButton("停止压测")
         self.stop_process_button.setDisabled(True)
         self.verticalLayout_left.addWidget(self.stop_process_button)
 

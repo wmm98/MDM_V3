@@ -21,7 +21,7 @@ class UIAutoPage(DevicePage):
         device = u2.connect(self.device_name)
         self.device = device
 
-    def element_is_exist(self, element_id, timeout=10):
+    def element_is_exist(self, element_id, timeout=30):
         return self.device(resourceId=element_id).exists(timeout=timeout)
 
     def element_is_not_exist(self, element_id, timeout=10):

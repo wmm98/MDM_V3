@@ -4,9 +4,6 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QComboBox, QButtonGroup, QWidget, QSplitter, QTextEdit, QPushButton, QLabel, QMessageBox
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
 import shutil
-
-from huggingface_hub import upload_file
-
 import config_path
 import configfile
 from pubilc import public_
