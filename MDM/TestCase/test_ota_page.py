@@ -187,6 +187,7 @@ class TestOTA:
                                   self.device_ui_page.remove_special_char(upgrade_error_description).upper):
                                 self.device_ui_page.reboot_device()
                                 break
+
                         elif current_history_json["data"]["otaHistorys"][0]["status"] == 2:
                             log.info("ota升级成功")
                         else:
