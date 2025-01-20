@@ -1,4 +1,6 @@
 import os.path
+import time
+from datetime import datetime
 
 from Common.process_shell import Shell
 from Common.public_page import PublicPage
@@ -8,6 +10,16 @@ shell = Shell()
 class DevicePage(PublicPage):
     def __init__(self, device_name):
         self.device_name = device_name
+
+    def time_to_timestamp(self, time_str):
+        time_format = "%Y-%m-%d %H:%M:%S"
+        dt_object = datetime.strptime(time_str, time_format)
+        timestamp = int(dt_object.timestamp())
+        return timestamp
+
+    # 获取当前的时间戳，精确到s
+    def get_current_timestamp(self):
+        return int(time.time())
 
     def send_adb_shell_command(self, cmd):
         cmd = "adb -s %s shell %s" % (self.device_name, cmd)
@@ -46,4 +58,30 @@ class DevicePage(PublicPage):
         cmd = "md5sum %s | awk {'print $1'}" % file_path
         result = self.remove_special_char(self.send_adb_shell_command(cmd))
         return result
+
+    def reboot_device(self):
+        cmd = "reboot"
+        self.send_adb_shell_command(cmd)
+
+    def device_is_boot(self):
+        cmd = "getprop sys.boot_completed"
+        result = self.send_adb_shell_command(cmd)
+        if result.find("1") != -1:
+            return True
+        else:
+            return False
+
+    def devices_adb_online(self):
+        result = self.remove_special_char(shell.invoke("adb devices"))
+        if result.find(self.device_name + "device") != -1:
+            return True
+        else:
+            return False
+
+    def restart_adb_server(self):
+        shell.invoke("adb kill-server")
+        shell.invoke("adb start-server")
+        time.sleep(1)
+
+
 

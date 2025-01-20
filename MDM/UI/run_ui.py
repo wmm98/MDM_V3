@@ -423,6 +423,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.stop_process_button.setDisabled(True)
         self.submit_button.setEnabled(True)
         self.submit_button.setText("开始测试")
+        self.text_edit.insertPlainText("测试结束\n")
         self.timer.stop()
 
     def start_qt_process(self, file_path):
