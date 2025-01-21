@@ -1,5 +1,6 @@
 import os
-
+import time
+from datetime import datetime
 
 class PublicPage:
     def __init__(self):
@@ -24,6 +25,20 @@ class PublicPage:
 
     def remove_special_char(self, string):
         return string.replace(" ", "").replace("\n", "").replace("\r", "").replace("\t", "")
+
+    def time_to_timestamp(self, time_str):
+        time_format = "%Y-%m-%d %H:%M:%S"
+        dt_object = datetime.strptime(time_str, time_format)
+        timestamp = int(dt_object.timestamp())
+        return timestamp
+
+        # 获取当前的时间戳，精确到s
+    def get_current_timestamp(self):
+        return int(time.time())
+
+    def get_current_time(self):
+        return time.time()
+
 
 if __name__ == '__main__':
     public = PublicPage()
