@@ -274,7 +274,6 @@ class TestOTA:
                         log.info("设备ADB在线")
                         break
                     time.sleep(1)
-
                 # if not self.device_ui_page.is_screen_on():
                 #     self.device_ui_page.press_power_button()
                 # time.sleep(1)
