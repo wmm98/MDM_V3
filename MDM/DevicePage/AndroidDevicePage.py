@@ -74,5 +74,22 @@ class DevicePage(PublicPage):
         shell.invoke("adb start-server")
         time.sleep(1)
 
+    def is_screen_on(self):
+        res = self.send_adb_shell_command("\"dumpsys window | grep mAwake\"")
+        if "mAwake=true".upper() in self.remove_special_char(res).upper():
+            return True
+        else:
+            return False
+
+    def press_power_button(self):
+        self.send_adb_shell_command("input keyevent KEYCODE_POWER")
+
+    def back_home(self):
+        self.send_adb_shell_command("input keyevent KEYCODE_BACK")
+
+    def unlock(self):
+        self.send_adb_shell_command("input swipe 300 500 300 0")
+
+
 
 

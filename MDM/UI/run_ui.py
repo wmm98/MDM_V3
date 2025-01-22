@@ -73,7 +73,6 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # 初始化进程
         self.qt_process = QProcess()
-        self.submit_button.clicked.connect(self.handle_submit)
 
         # 展示用例树
         self.list_tree_cases()
@@ -348,18 +347,6 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
     def handle_finished(self):
         self.stop_process()
 
-    @pyqtSlot()
-    def handle_stdout(self):
-        data = self.qt_process.readAllStandardOutput()
-        stdout = bytes(data).decode("utf-8")
-        print("Stdout:", stdout)
-
-    @pyqtSlot()
-    def handle_stderr(self):
-        data = self.qt_process.readAllStandardError()
-        stderr = bytes(data).decode("utf-8")
-        print("Stderr:", stderr)
-
     def handle_submit(self):
         # 检查用例是否为空
         self.tree_status = []
@@ -420,29 +407,12 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
     def stop_process(self):
         # 文件位置初始化
         self.force_task_kill()
+        self.last_position = 0
         self.stop_process_button.setDisabled(True)
         self.submit_button.setEnabled(True)
         self.submit_button.setText("开始测试")
         self.text_edit.insertPlainText("测试结束\n")
         self.timer.stop()
-
-    def start_qt_process(self, file_path):
-        # 启动 外部 脚本
-        python_executable = sys.executable  # 获取当前 Python 环境的路径
-        self.qt_process.start(python_executable, [file_path])  # 启动外部脚本
-        # Wait for the process to start
-        if not self.qt_process.waitForStarted():
-            print("启动失败")
-        else:
-            print("启动成功")
-
-    def handle_stdout(self):
-        output = self.qt_process.readAllStandardOutput().data().decode()
-        print("STDOUT:", output)
-
-    def handle_stderr(self):
-        error = self.qt_process.readAllStandardError().data().decode()
-        print("STDERR:", error)
 
     def force_task_kill(self):
         self.qt_process.startDetached("taskkill /PID %s /F /T" % str(self.qt_process.processId()))
