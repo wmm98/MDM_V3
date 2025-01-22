@@ -68,6 +68,7 @@ class TestOTA:
 
             flag = 1
             while flag <= test_times:
+                log.info("***************第%s次ota压测*****************" % flag)
                 # 获取当前测试的sn的设备是否在线
                 log.info("测试前删除当前设备的ota推送记录")
                 # 获取当前sn的ota历史记录
@@ -234,7 +235,7 @@ class TestOTA:
                                     # 检查设备是否再次重启升级
                                     log.info("检测设备是否再次升级")
                                     now_time = self.device_ui_page.get_current_time()
-                                    while self.device_ui_page.get_current_time() < now_time + 90:
+                                    while self.device_ui_page.get_current_time() < now_time + 120:
                                         if not self.device_ui_page.devices_adb_online():
                                             log.info("假升级中...")
                                             break
@@ -284,7 +285,7 @@ class TestOTA:
                 # 检查设备是否再次重启升级
                 log.info("检测设备是否再次升级")
                 now_time = self.device_ui_page.get_current_time()
-                while self.device_ui_page.get_current_time() < now_time + 90:
+                while self.device_ui_page.get_current_time() < now_time + 120:
                     if not self.device_ui_page.devices_adb_online():
                         log.info("假升级中...")
                         break
@@ -296,7 +297,7 @@ class TestOTA:
                         break
                     time.sleep(1)
 
-                log.info("第%s次ota压测完成" % flag)
+                log.info("*******************第%s次ota压测完成********************" % flag)
                 flag += 1
                 time.sleep(2)
             if probability_flag > 0:
