@@ -43,9 +43,12 @@ class OTA_MainWindow(config_path.UIConfigPath):
         self.ota_edit.setFixedWidth(central_length // 2 + 100)
         self.select_button = QtWidgets.QPushButton('选择')
         self.upload_button = QtWidgets.QPushButton('上传')
+        self.upload_tips = QtWidgets.QLabel("未上传")
+        self.upload_tips.setStyleSheet("color:red")
         ota_info_layout.addWidget(self.ota_edit)
         ota_info_layout.addWidget(self.select_button)
         ota_info_layout.addWidget(self.upload_button)
+        ota_info_layout.addWidget(self.upload_tips)
         ota_info_layout.addStretch(1)
         self.verticalLayout_left.addLayout(ota_info_layout)
         self.verticalLayout_left.addWidget(QLabel())
@@ -327,6 +330,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         if not self.ota_edit.text():
             QtWidgets.QMessageBox.warning(None, "提示", "请选择OTA文件")
             return
+        self.upload_tips.setText("开始上传...")
         file_name = self.ota_edit.text()
         file_new_path = os.path.join(conf_path.ota_origin_path, os.path.basename(file_name))
         shutil.copy(file_name, file_new_path)
@@ -363,6 +367,7 @@ class OTA_UI(QtWidgets.QMainWindow, OTA_MainWindow):
         if "error" not in json_data:
             if json_data["code"] == 100000:
                 self.upload_flag += 1
+                self.upload_tips.setText("第%d片上传成功！" % self.current_upload_index)
                 self.current_upload_index += 1
                 self.start_next_upload()
             else:

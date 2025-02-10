@@ -51,8 +51,8 @@ class Ui_MainWindow(config_path.UIConfigPath):
         act_version_info.addWidget(self.label_act_version)
         act_version_info.addWidget(self.test_version)
         act_version_info.addWidget(self.release_version)
-        act_version_info.addStretch(1)
         self.test_version.setChecked(True)
+        act_version_info.addStretch(1)
         self.verticalLayout_left.addLayout(act_version_info)
         self.verticalLayout_left.addWidget(QtWidgets.QLabel())
         # 只能选一个

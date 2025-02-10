@@ -52,15 +52,14 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.ui_config = configfile.ConfigP(self.ui_config_file_path)
 
         self.ota_ui = OTA_UI()
-
         self.setupUi(self)
+        self.uuid = None
+        self.display_captcha()
         self.AllTestCase = None
         self.device_sn = None
         self.inti_ui()
         self.init_signal_slot()
-        self.display_captcha()
         self.cases_selected_sum = 0
-        self.uuid = None
 
     def inti_ui(self):
         # 初始化ini文件
@@ -315,6 +314,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             url = HttpInterfaceConfig.test_get_captcha_address
         else:
             url = HttpInterfaceConfig.release_get_captcha_address
+        print(url)
         response = requests.get(url).json()
         uuid = response["data"]["uuid"]
         captcha_base64 = response["data"]["captcha"]

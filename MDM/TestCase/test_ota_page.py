@@ -163,7 +163,7 @@ class TestOTA:
 
                 if history_flag > 0:
                     log.error("未检查到ota推送记录")
-                    raise
+                    continue
 
                 log.info("检查ota包实时下载情况")
                 while True:
@@ -293,6 +293,7 @@ class TestOTA:
                 # 检查设备在线情况
                 while True:
                     if self.device_ui_page.devices_adb_online():
+                        log.info("设备adb在线，重启成功")
                         break
                     time.sleep(1)
 
@@ -305,6 +306,6 @@ class TestOTA:
                 log.info("测试失败率为：%s" % (probability_flag / test_times))
             log.info("***************ota压测结束***************")
         except Exception as e:
-            log.info("运行过程中代码异常，请检查！！")
+            log.error("运行过程中代码异常，请检查！！")
             log.error(str(e))
-            time.sleep(2)
+            time.sleep(3)
