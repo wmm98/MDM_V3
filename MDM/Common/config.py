@@ -48,6 +48,7 @@ class MDM3Interface:
     ota_release_histories_url = "api/v1/ota/histories"
     ota_histories_delete_url = "api/v1/ota/histories/delete"
     ota_packages_url = "api/v1/ota/packages"
+    devices_list_url = "api/v3/device/basic/list"
 
 
 

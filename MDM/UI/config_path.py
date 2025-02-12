@@ -20,3 +20,7 @@ class UIConfigPath:
     ota_path = os.path.join(package_path, "OTA")
     ota_origin_path = os.path.join(ota_path, "Original")
     ota_split_path = os.path.join(ota_path, "Split")
+
+    apk_path = os.path.join(package_path, "APK")
+    apk_origin_path = os.path.join(ota_path, "Original")
+    apk_split_path = os.path.join(ota_path, "Split")

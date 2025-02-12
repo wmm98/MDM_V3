@@ -15,9 +15,6 @@ class TestOTA:
 
     def setup_class(self):
         self.bg_conf_file = configparser.ConfigParser()
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        print(Config.bg_config_ini_path)
-        print(Config.ui_config_ini_path)
         self.bg_conf_file.read(Config.bg_config_ini_path)
         self.ui_conf_file = configparser.ConfigParser()
         self.ui_conf_file.read(Config.ui_config_ini_path)
@@ -29,7 +26,7 @@ class TestOTA:
         self.sn = self.device_ui_page.remove_special_char(self.device_ui_page.get_device_serial())
 
     def teardown_class(self):
-        print("运行结束")
+        log.info("运行结束")
 
     @allure.feature("stability_normal_release_ota")
     @allure.title("压测ota正常发布")
@@ -126,6 +123,56 @@ class TestOTA:
                                 md5_value = ota["md5Sum"]
                                 break
                 # 先检查设备是否在线
+                get_devices_list_url = MDM3Interface.test_base_url + MDM3Interface.devices_list_url
+                get_devices_list_json = {"page": 1, "pageSize": 10, "departmentId": department_id, "order": "id", "sort": "desc", "sn": self.sn, "deviceType": 0,
+                                         "model": "", "fwVer": "", "description": "", "iotStatus": ""}
+
+                # 先确认设备可上网, 设备3个周期内显示设备在线状态
+                log.info("检查设备wifi状态")
+                if not self.device_ui_page.wifi_is_enable():
+                    self.device_ui_page.enable_wifi_btn()
+                    log.info("给wifi模块上电")
+                    time.sleep(2)
+                else:
+                    log.info("wifi模块当前上电状态")
+
+                if not self.device_ui_page.ping_network(timeout=180):
+                    log.error("设备无法上网，请检查！！！")
+                    raise
+                else:
+                    log.info("设备可上网")
+
+                now_time = self.device_ui_page.get_current_time()
+                while self.device_ui_page.get_current_time() < now_time + 120 * 4:
+                    device_response = self.request_method.m_get(url=get_devices_list_url, session_id=session_id, params=get_devices_list_json).json()
+                    if device_response["code"] == 100000:
+                        if device_response["data"]["total"] == 1:
+                            device_info = device_response["data"]["rows"][0]
+                            if device_info["sn"] == self.sn:
+                                print(device_info["iotStatus"])
+                                if device_info["iotStatus"] == "online":
+                                    log.info("平台显示设备：%s 在线" % self.sn)
+                                    break
+                                else:
+                                    log.info("平台显示设备：%s 离线" % self.sn)
+                    time.sleep(1)
+                else:
+                    log.info("设备可上网，4个周期内设备显示不现在线，请检查！！！")
+                    time.sleep(2)
+                    raise
+
+                # for i in range(1, 10):
+                #     devices_list_json = get_devices_list_json.copy()
+                #     devices_list_json["page"] = i
+                #     devices_list_result = self.request_method.m_get(url=get_devices_list_url, session_id=session_id, params=devices_list_json).json()
+                #     if devices_list_result["code"] == 100000:
+                #         if devices_list_result["data"]["total"] >= 1:
+                #             for device in devices_list_result["data"]["rows"]:
+                #                 if device["sn"] == self.sn:
+                #                     log.info("设备当前状态为：%s" % device["iotStatus"])
+                #                     if device["iotStatus"] != "online":
+                #                         break
+
                 release_time_stamp = self.device_ui_page.get_current_timestamp()
                 time.sleep(3)
                 # # 释放ota
@@ -194,8 +241,9 @@ class TestOTA:
                                             if is_probability_test:
                                                 probability_flag += 1
                                                 break
-                                            time.sleep(3)
-                                            raise
+                                            else:
+                                                time.sleep(3)
+                                                raise
                                 else:
                                     log.info("设备%s当前详情：%s" % (self.sn, current_history_json["data"]["otaHistorys"][0]["failDes"]))
                                 # elif (self.device_ui_page.remove_special_char(current_history_json["data"]["otaHistorys"][0]["failDes"]).upper() ==
@@ -209,9 +257,13 @@ class TestOTA:
                                 break
                             elif current_history_json["data"]["otaHistorys"][0]["status"] == 3:
                                 log.info("设备%s当前详情：%s" % (self.sn, current_history_json["data"]["otaHistorys"][0]["failDes"]))
-                                log.error("ota升级失败")
+                                log.error("详情中显示ota升级失败")
                                 time.sleep(3)
-                                break
+                                if is_probability_test:
+                                    probability_flag += 1
+                                    break
+                                else:
+                                    raise
                             elif current_history_json["data"]["otaHistorys"][0]["status"] == 4:
                                 if self.device_ui_page.remove_special_char(current_history_json["data"]["otaHistorys"][0]["failDes"]).upper() == upgrade_error_description.upper():
                                     log.info("设备%s当前详情：%s" % (self.sn, current_history_json["data"]["otaHistorys"][0]["failDes"]))

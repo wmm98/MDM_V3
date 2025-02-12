@@ -126,28 +126,32 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             # pul.restart_adb()
 
     def switch_sever(self):
-        if self.test_version.isChecked():
-            url = HttpInterfaceConfig.test_switch_server_address
+        if self.ui_config.option_exist(self.ui_config.section_ui_to_background, self.ui_config.option_session_id):
+            if self.test_version.isChecked():
+                url = HttpInterfaceConfig.test_switch_server_address
+            else:
+                url = HttpInterfaceConfig.release_switch_server_address
+            th_info = {}
+            th_info["url"] = url
+            th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                    self.ui_config.option_session_id)
+            json = {}
+            json["sns"] = [self.device_sn]
+            json["resetFactoryType"] = "1"
+            json["desc"] = ""
+            json["departmentId"] = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                       self.ui_config.option_department_id))
+            if self.test_version.isChecked():
+                json["url"] = HttpInterfaceConfig.release_server_address
+            else:
+                json["url"] = HttpInterfaceConfig.test_server_address
+            th_info["json"] = json
+            self.switch_server_worker = PostRequestWorker(th_info)
+            self.switch_server_worker.progress.connect(self.handle_switch_server)
+            self.switch_server_worker.start()
         else:
-            url = HttpInterfaceConfig.release_switch_server_address
-        th_info = {}
-        th_info["url"] = url
-        th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
-                                                                self.ui_config.option_session_id)
-        json = {}
-        json["sns"] = [self.device_sn]
-        json["resetFactoryType"] = "1"
-        json["desc"] = ""
-        json["departmentId"] = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
-                                                                   self.ui_config.option_department_id))
-        if self.test_version.isChecked():
-            json["url"] = HttpInterfaceConfig.release_server_address
-        else:
-            json["url"] = HttpInterfaceConfig.test_server_address
-        th_info["json"] = json
-        self.switch_server_worker = PostRequestWorker(th_info)
-        self.switch_server_worker.progress.connect(self.handle_switch_server)
-        self.switch_server_worker.start()
+            QMessageBox.information(None, "提示", "请先登录！！！")
+            return
 
     def handle_switch_server(self, json_data):
         if "error" not in json_data:
@@ -167,9 +171,13 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.device_sn = pul.remove_special_char(pul.get_device_serial(device_name))
 
     def get_device_status(self):
-        self.device_status_label.setText("正在获取设备状态...")
-        self.device_list_flag = 1
-        self.start_next_get_devices_list()
+        if self.ui_config.option_exist(self.ui_config.section_ui_to_background, self.ui_config.option_session_id):
+            self.device_status_label.setText("正在获取设备状态...")
+            self.device_list_flag = 1
+            self.start_next_get_devices_list()
+        else:
+            QMessageBox.information(None, "提示", "请先登录！！！")
+            return
 
     def start_next_get_devices_list(self):
         thr_info = {}
@@ -216,26 +224,31 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
                     return
             else:
                 QtWidgets.QMessageBox.warning(None, "提示", "查询设备信息失败：%s" % json_data["error"])
+                return
 
     def bind_device(self):
-        if self.test_version.isChecked():
-            url = HttpInterfaceConfig.test_bind_devices_address
-        else:
-            url = HttpInterfaceConfig.release_bind_devices_address
+        if self.ui_config.option_exist(self.ui_config.section_ui_to_background, self.ui_config.option_session_id):
+            if self.test_version.isChecked():
+                url = HttpInterfaceConfig.test_bind_devices_address
+            else:
+                url = HttpInterfaceConfig.release_bind_devices_address
 
-        th_info = {}
-        th_info["url"] = url
-        th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
-                                                                self.ui_config.option_session_id)
-        json = {}
-        json["sn"] = self.device_sn
-        json["deviceType"] = 1
-        json["departmentId"] = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
-                                                                    self.ui_config.option_department_id))
-        th_info["json"] = json
-        self.bind_worker = PostRequestWorker(th_info)
-        self.bind_worker.progress.connect(self.handle_bind_device)
-        self.bind_worker.start()
+            th_info = {}
+            th_info["url"] = url
+            th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                    self.ui_config.option_session_id)
+            json = {}
+            json["sn"] = self.device_sn
+            json["deviceType"] = 1
+            json["departmentId"] = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
+                                                                        self.ui_config.option_department_id))
+            th_info["json"] = json
+            self.bind_worker = PostRequestWorker(th_info)
+            self.bind_worker.progress.connect(self.handle_bind_device)
+            self.bind_worker.start()
+        else:
+            QMessageBox.information(None, "提示", "请先登录！！！")
+            return
 
     def handle_bind_device(self, json_data):
         if "error" not in json_data:
