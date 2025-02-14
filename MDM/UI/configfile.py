@@ -25,7 +25,6 @@ class ConfigP(UIConfigPath):
     option_session_id = "session_id"
     option_department_id = "department_id"
 
-
     section_ota_interface = "OTA"
     option_ota_name = "ota_name"
     option_ota_id = "ota_id"
