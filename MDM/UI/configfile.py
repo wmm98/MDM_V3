@@ -31,6 +31,10 @@ class ConfigP(UIConfigPath):
     option_ota_is_part_silent = "ota_part_silent"
     option_ota_is_not_silent = "ota_not_silent"
 
+    section_apk_silent_upgrade = "APK_Single_Stability"
+    option_apk_package_name = "apk_package_name"
+    option_apk_id = "apk_id"
+
     def __init__(self, ini_path):
         self.ini_path = ini_path
         self.config = configparser.ConfigParser()

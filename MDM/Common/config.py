@@ -39,6 +39,10 @@ class Config:
     option_ota_is_part_silent = "ota_part_silent"
     option_ota_is_not_silent = "ota_not_silent"
 
+    section_apk_silent_upgrade = "APK_Single_Stability"
+    option_apk_package_name = "apk_package_name"
+    option_apk_id = "apk_id"
+
 
 class MDM3Interface:
     test_base_url = "http://192.168.0.30:8080/"

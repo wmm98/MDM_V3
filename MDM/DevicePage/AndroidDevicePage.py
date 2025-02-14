@@ -65,10 +65,17 @@ class DevicePage(PublicPage):
             return False
 
     def devices_adb_online(self):
-        result = self.remove_special_char(shell.invoke("adb devices"))
-        if result.find(self.device_name + "device") != -1:
-            return True
-        else:
+        try:
+            result = self.remove_special_char(shell.invoke("adb devices"))
+            log.info("adb devices \n: %s" % result)
+            is_exist = result.find(self.device_name)
+            log.info("is_exist: %s" % is_exist)
+            if is_exist != -1:
+                return True
+            else:
+                return False
+        except Exception as e:
+            log.error("adb devices error: %s" % str(e))
             return False
 
     def restart_adb_server(self):

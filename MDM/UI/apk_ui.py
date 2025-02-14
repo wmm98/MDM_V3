@@ -58,35 +58,42 @@ class APK_MainWindow(config_path.UIConfigPath):
         self.verticalLayout_left.addWidget(QLabel("已上传的apk列表，请选择需要测试的apk包："))
         layout_apk_info = QHBoxLayout()
 
-        self.apk_list_box = QListView(self)
-        self.apk_list_box.setSelectionMode(QListView.MultiSelection)
-        self.apk_list_box.setFixedWidth(central_length // 2 + 100)
+        # self.apk_list_box = QListView(self)
+        # self.apk_list_box.setSelectionMode(QListView.MultiSelection)
+        # self.apk_list_box.setFixedWidth(central_length // 2 + 100)
+
+        self.apk_list_box = QtWidgets.QListWidget()
+        self.apk_list_box.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+
         self.get_apk_list_button = QtWidgets.QPushButton("获取apk列表")
         self.delete_apk_button = QtWidgets.QPushButton("删除apk")
+        self.delete_tips = QtWidgets.QLabel("")
+        self.delete_tips.setStyleSheet("color:red")
         # self.delete_all = QtWidgets.QPushButton("删除全部")
         layout_apk_info.addWidget(self.apk_list_box)
         layout_apk_info.addWidget(self.get_apk_list_button)
         layout_apk_info.addWidget(self.delete_apk_button)
+        layout_apk_info.addWidget(self.delete_tips)
         # layout_apk_info.addWidget(self.delete_all)
         layout_apk_info.addStretch(1)
         self.verticalLayout_left.addLayout(layout_apk_info)
         self.verticalLayout_left.addWidget(QLabel())
 
-        # 选择apk安装方式
-        self.verticalLayout_left.addWidget(QLabel("选择apk安装方式："))
-        layout_install_way = QHBoxLayout()
-        self.install_way_group = QButtonGroup()
-        # self.install_way_group.setExclusive(True)
-        self.install_not_silent = QCheckBox("非静默安装")
-        self.install_part_silent = QCheckBox("半静默安装")
-        layout_install_way.addWidget(self.install_not_silent)
-        layout_install_way.addWidget(self.install_part_silent)
-        layout_install_way.addStretch(1)
-        self.verticalLayout_left.addLayout(layout_install_way)
-        self.verticalLayout_left.addWidget(QLabel())
-        # 只能选择一种方式安装
-        self.install_way_group.addButton(self.install_not_silent)
-        self.install_way_group.addButton(self.install_part_silent)
+        # # 选择apk安装方式
+        # self.verticalLayout_left.addWidget(QLabel("选择apk安装方式："))
+        # layout_install_way = QHBoxLayout()
+        # self.install_way_group = QButtonGroup()
+        # # self.install_way_group.setExclusive(True)
+        # self.install_not_silent = QCheckBox("非静默安装")
+        # self.install_part_silent = QCheckBox("半静默安装")
+        # layout_install_way.addWidget(self.install_not_silent)
+        # layout_install_way.addWidget(self.install_part_silent)
+        # layout_install_way.addStretch(1)
+        # self.verticalLayout_left.addLayout(layout_install_way)
+        # self.verticalLayout_left.addWidget(QLabel())
+        # # 只能选择一种方式安装
+        # self.install_way_group.addButton(self.install_not_silent)
+        # self.install_way_group.addButton(self.install_part_silent)
 
         # 设置压测次数
         layout_test_time_info = QHBoxLayout()
@@ -131,7 +138,7 @@ class APK_MainWindow(config_path.UIConfigPath):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "apk升级压测界面"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "apk静默升级压测界面"))
 
 
 class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
@@ -169,11 +176,25 @@ class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
             os.remove(os.path.join(split_path, file))
 
     def handle_delete_apk(self):
+        if not self.apk_list_box.selectedItems():
+            QtWidgets.QMessageBox.warning(None, "提示", "请选择需要删除的apk包")
+            return
+
         self.apk_id_flag = 0
-        if self.apk_list_box.currentText():
-            self.delete_apk_name = os.path.basename(self.apk_list_box.currentText())
+        apk_delete_ids = []
+        selected_items = self.apk_list_box.selectedItems()
+        self.selected_texts = [item.text() for item in selected_items]
+        print(self.selected_texts)
+        for text in self.selected_texts:
             # 先查询apk包，获取apk_id
-            self.query_apk_package()
+            if text in self.apks_info_dict:
+                apk_id = self.apks_info_dict[text][0]
+                apk_delete_ids.append(apk_id)
+                print(apk_delete_ids)
+                self.delete_apk_package(apk_id)
+            # self.query_apk_package()
+        self.delete_tips.setText("已成功删除选中的apk包")
+        self.list_apk_packages()
 
     def delete_apk_package(self, apk_id):
         url = HttpInterfaceConfig.test_delete_apk_address
@@ -193,9 +214,7 @@ class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
     def handle_delete_apk_response(self, json_data):
         if "error" not in json_data:
             if json_data["code"] == 100000:
-                self.list_apk_packages()
-                QMessageBox.information(None, "提示", "删除apk包成功")
-                return
+                pass
             else:
                 QMessageBox.warning(None, "提示", "%s" % json_data["message"])
                 return
@@ -223,15 +242,17 @@ class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
         self.query_worker.start()
 
     def handle_query_response(self, json_data):
-        if self.apk_id_flag < 10:
+        if self.apk_id_flag != -1:
             if "error" not in json_data:
                 if json_data["code"] == 100000:
                     if json_data["data"]["apks"] is not None:
                         self.apk_id_flag += 1
                         for pack in json_data["data"]["apks"]:
-                            if pack["name"] == os.path.basename(self.apk_list_box.currentText()):
+                            if pack["appName"] in self.selected_texts:
                                 apk_id = pack["id"]
                                 self.delete_apk_package(apk_id)
+                    else:
+                        self.apk_id_flag = -1
                 else:
                     QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
                     return
@@ -243,9 +264,12 @@ class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
             return
 
     def list_apk_packages(self):
+        self.apk_list_box.clear()
         self.apk_list_flag = 1
-        self.apk_packages_list = []
-        self.apk_package_ids_list = []
+        # self.apk_packages_list = []
+        # self.apk_package_ids_list = []
+        # self.apk_packages_name_list = []
+        self.apks_info_dict = {}
         self.start_next_get_apk_list()
 
     def start_next_get_apk_list(self):
@@ -269,29 +293,33 @@ class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
         self.apks_worker.start()
 
     def handle_apk_list_response(self, json_data):
+        print("===========apk列表===========")
         print(json_data)
-        if self.apk_list_flag < 10:
+        if self.apk_list_flag != -1:
             if "error" not in json_data:
                 if json_data["code"] == 100000:
                     if json_data["data"]['apks'] is not None:
                         self.apk_list_flag += 1
                         for pack in json_data["data"]["apks"]:
-                            self.apk_packages_list.append(pack["name"])
-                            self.apk_package_ids_list.append(pack["id"])
+                            self.apks_info_dict[pack["appName"]] = [pack["id"], pack["pkgName"]]
+                            print(self.apks_info_dict)
                     else:
-                        self.apk_list_box.clear()
-                        self.apk_list_box.addItems(self.apk_packages_list)
-                        return
+                        self.apk_list_flag = -1
+                        if self.apks_info_dict:
+                            # 添加到apk列表框中
+                            self.apk_list_box.clear()
+                            self.apk_list_box.addItems(list(self.apks_info_dict.keys()))
 
                     self.start_next_get_apk_list()
 
     def handle_submit(self):
-        if not self.apk_list_box.currentText():
-            QtWidgets.QMessageBox.warning(None, "提示", "请上传并且选择apk包")
+        if not self.apk_list_box.selectedItems() or len(self.apk_list_box.selectedItems()) > 1:
+            QtWidgets.QMessageBox.warning(None, "提示", "请选择一个app进行测试")
             return
-        if not self.install_way_group.checkedButton():
-            QtWidgets.QMessageBox.warning(None, "提示", "请选择apk升级方式")
-            return
+        #
+        # if not self.install_way_group.checkedButton():
+        #     QtWidgets.QMessageBox.warning(None, "提示", "请选择apk升级方式")
+        #     return
         if not self.test_times.currentText():
             QtWidgets.QMessageBox.warning(None, "提示", "请选择测试次数")
             return
@@ -302,22 +330,28 @@ class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
 
     def save_config(self):
         config = ConfigP(self.ui_config_file_path)
-        section = config.section_apk_interface
+        section = config.section_apk_silent_upgrade
         config.add_config_section(section)
 
-        apk_name = self.apk_list_box.currentText()
-        config.add_config_option(section, config.option_apk_name, apk_name)
-        apk_id = self.apk_package_ids_list[self.apk_packages_list.index(apk_name)]
-        config.add_config_option(section, config.option_apk_id, str(apk_id))
+        selected_items = self.apk_list_box.selectedItems()
+        self.selected_texts = [item.text() for item in selected_items]
+        test_app_name = self.selected_texts[0]
 
-        if self.install_not_silent.isChecked():
-            config.add_config_option(section, config.option_apk_is_not_silent, "1")
-        else:
-            config.add_config_option(section, config.option_apk_is_not_silent, "0")
-        if self.install_part_silent.isChecked():
-            config.add_config_option(section, config.option_apk_is_part_silent, "1")
-        else:
-            config.add_config_option(section, config.option_apk_is_part_silent, "0")
+        for app_ in self.apks_info_dict:
+            if app_ == test_app_name:
+                apk_id = self.apks_info_dict[app_][0]
+                apk_pkg_name = self.apks_info_dict[app_][1]
+                self.ui_config.add_config_option(section, self.ui_config.option_apk_package_name, apk_pkg_name)
+                self.ui_config.add_config_option(section, self.ui_config.option_apk_id, str(apk_id))
+
+        # if self.install_not_silent.isChecked():
+        #     config.add_config_option(section, config.option_apk_is_not_silent, "1")
+        # else:
+        #     config.add_config_option(section, config.option_apk_is_not_silent, "0")
+        # if self.install_part_silent.isChecked():
+        #     config.add_config_option(section, config.option_apk_is_part_silent, "1")
+        # else:
+        #     config.add_config_option(section, config.option_apk_is_part_silent, "0")
 
         config.add_config_option(section, config.test_times, self.test_times.currentText())
 
@@ -400,7 +434,8 @@ class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
         print(json_data)
         if "error" not in json_data:
             if json_data["code"] == 100000:
-                QtWidgets.QMessageBox.information(None, "提示", "apk包解析成功")
+                # QtWidgets.QMessageBox.information(None, "提示", "apk包解析成功")
+                self.upload_tips.setText("apk解析成功")
                 self.update_apk_package(json_data)
             else:
                 QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
@@ -410,25 +445,26 @@ class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
             return
 
     def update_apk_package(self, json_data):
+        print("================更新记录================")
+        print(json_data)
         url = HttpInterfaceConfig.test_update_apk_address
         th_info = {}
         data = {}
         department_id = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
                                                         self.ui_config.option_department_id)
+        data["apkPath"] = json_data["data"]["downloadUrl"]
+        data["appCate"] = 7
+        data["appName"] = json_data["data"]["appName"]
+        data["appPushShop"] = 0
+        data["appType"] = 0
         data["departmentId"] = int(department_id)
         data["description"] = ""
         data["downloadUrl"] = json_data["data"]["downloadUrl"]
-        data["devModel"] = json_data["data"]["devModel"]
-        data["downloadUrl"] = json_data["data"]["downloadUrl"]
-        data["firmwareVersion"] = json_data["data"]["firmwareVersion"]
+        data["image"] = json_data["data"]["image"]
         data["md5Sum"] = json_data["data"]["md5Sum"]
-        data["name"] = json_data["data"]["name"]
-        data["apkType"] = 0
+        data["pkgName"] = json_data["data"]["pkgName"]
         data["size"] = json_data["data"]["size"]
-        data["systemVersion"] = json_data["data"]["systemVersion"]
         data["version"] = json_data["data"]["version"]
-        data["wirelessModule"] = json_data["data"]["wirelessModule"]
-
         th_info["json"] = data
         th_info["url"] = url
         th_info["session_id"] = self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
@@ -440,9 +476,9 @@ class APK_UI(QtWidgets.QMainWindow, APK_MainWindow):
     def handle_update_response(self, json_data):
         if "error" not in json_data:
             if json_data["code"] == 100000:
+                self.upload_tips.setText("apk更新成功，apk包上传成功")
                 self.list_apk_packages()
-                QMessageBox.information(None, "提示", "apk包上传成功")
-                return
+                # QMessageBox.information(None, "提示", "apk更新成功，apk包上传成功")
             else:
                 QMessageBox.warning(None, "提示", "%s" % json_data["message"])
                 return

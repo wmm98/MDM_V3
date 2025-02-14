@@ -17,6 +17,7 @@ import configfile
 import config_path
 from interface_config import HttpInterfaceConfig
 from ota_ui import OTA_UI
+from apk_ui import APK_UI
 from pubilc import public_
 from request_thread import *
 
@@ -52,6 +53,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.ui_config = configfile.ConfigP(self.ui_config_file_path)
 
         self.ota_ui = OTA_UI()
+        self.apk_ui = APK_UI()
         self.setupUi(self)
         self.uuid = None
         self.display_captcha()
@@ -99,6 +101,16 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.stop_process_button.clicked.connect(self.stop_process)
 
         self.ota_ui.submit_button.clicked.connect(self.display_ota_stability_test_times)
+        self.apk_ui.submit_button.clicked.connect(self.display_apk_stability_test_times)
+
+    def display_apk_stability_test_times(self):
+        time.sleep(1)
+        if self.apk_ui.submit_flag:
+            if self.item_S_T_STA_child_apk_test.checkState(0) == 2:
+                times = self.ui_config.get_option_value(self.ui_config.section_apk_silent_upgrade,
+                                                        self.ui_config.test_times)
+                self.item_S_T_STA_child_apk_test.setText(1, times)
+                self.item_S_T_STA_child_apk_test.setTextAlignment(1, Qt.AlignRight)
 
     def display_ota_stability_test_times(self):
         time.sleep(1)
@@ -173,7 +185,6 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
     def get_device_status(self):
         if self.ui_config.option_exist(self.ui_config.section_ui_to_background, self.ui_config.option_session_id):
             self.device_status_label.setText("正在获取设备状态...")
-            self.device_list_flag = 1
             self.start_next_get_devices_list()
         else:
             QMessageBox.information(None, "提示", "请先登录！！！")
@@ -187,8 +198,14 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             url = HttpInterfaceConfig.release_get_devices_address
         thr_info["url"] = url
         param = {}
-        param["page"] = self.device_list_flag
+        param["page"] = 1
         param["pageSize"] = 10
+        param["sn"] = self.device_sn
+        param["iotStatus"] = ""
+        param["deviceType"] = 0
+        param["model"] = ""
+        param["fmVer"] = ""
+        param["description"] = ""
         departmentID = int(self.ui_config.get_option_value(self.ui_config.section_ui_to_background,
                                                            self.ui_config.option_department_id))
         param["departmentId"] = departmentID
@@ -204,27 +221,17 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.devices_worker.start()
 
     def handle_devices_list_response(self, json_data):
-        if self.device_list_flag < 10:
-            if "error" not in json_data:
-                if json_data["code"] == 100000:
-                    if json_data["data"]['total'] > 0:
-                        for device_info in json_data["data"]["rows"]:
-                            print(device_info["sn"])
-                            if device_info["sn"] in self.device_sn:
-                                print("查询到设备信息.")
-                                self.device_status_label.setText("%s：%s" % (device_info["sn"], device_info["iotStatus"]))
-                                return
-                        self.device_list_flag += 1
-                        self.start_next_get_devices_list()
-                    else:
-                        self.device_status_label.setText("查询不到设备信息.")
-                        return
+        if "error" not in json_data:
+            if json_data["code"] == 100000:
+                if json_data["data"]['total'] == 0:
+                    self.device_status_label.setText("查询不到设备信息，设备未绑定！")
+
+                elif json_data["data"]['total'] == 1:
+                    if json_data["data"]["rows"][0]["sn"] == self.device_sn:
+                            device_status = json_data["data"]["rows"][0]["iotStatus"]
+                            self.device_status_label.setText("设备 : %s %s" % (self.device_sn, device_status))
                 else:
-                    QtWidgets.QMessageBox.warning(None, "提示", "%s" % json_data["message"])
-                    return
-            else:
-                QtWidgets.QMessageBox.warning(None, "提示", "查询设备信息失败：%s" % json_data["error"])
-                return
+                    self.device_status_label.setText("查询到多个设备信息，请联系管理员！")
 
     def bind_device(self):
         if self.ui_config.option_exist(self.ui_config.section_ui_to_background, self.ui_config.option_session_id):
@@ -399,7 +406,7 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
                                          self.ui_config.ui_option_cases, ",".join(self.transfer_cases))
 
         self.start_qprocess(conf_path.main_bat_path)
-
+        time.sleep(2)
         # 设置定时器检测间隔
         self.check_interval = 1000  # 定时器间隔，单位毫秒
         # 调试日志定时器
@@ -492,6 +499,10 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
             if item.checkState(0) == 2:
                 if not self.ota_ui.isVisible():
                     self.ota_ui.show()
+        if item == self.item_S_T_STA_child_apk_test:
+            if item.checkState(0) == 2:
+                if not self.apk_ui.isVisible():
+                    self.apk_ui.show()
 
     def list_tree_cases(self):
         # 用例数结构
@@ -522,6 +533,14 @@ class UIDisplay(QtWidgets.QMainWindow, Ui_MainWindow):
         self.item_S_T_STA_child_ota_test.setText(1, "")
         self.item_S_T_STA_child_ota_test.setText(2, "次")
         self.item_S_T_STA_child_ota_test.setFlags(
+            self.item_S_T_STA_child_ota_test.flags() | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEditable)
+
+        self.item_S_T_STA_child_apk_test = QTreeWidgetItem(self.item_S_T_STA)
+        self.item_S_T_STA_child_apk_test.setText(0, "APK推送压测")
+        self.item_S_T_STA_child_apk_test.setCheckState(0, Qt.Unchecked)
+        self.item_S_T_STA_child_apk_test.setText(1, "")
+        self.item_S_T_STA_child_apk_test.setText(2, "次")
+        self.item_S_T_STA_child_apk_test.setFlags(
             self.item_S_T_STA_child_ota_test.flags() | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEditable)
 
 
